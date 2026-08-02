@@ -43,12 +43,22 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # ── 4. Install Flutter dependencies ──────────────────────────────
+      # ── 4. Fix local.properties for Linux runner ──────────────────
+      #    The committed local.properties has Windows paths (C:\Users\HP\...)
+      #    We overwrite it here with the correct Linux runner paths.
+      - name: 🛠️ Write local.properties for runner
+        working-directory: mobile-app/android
+        run: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > local.properties
+          echo "sdk.dir=$ANDROID_SDK_ROOT" >> local.properties
+          cat local.properties
+
+      # ── 5. Install Flutter dependencies ──────────────────────────────
       - name: 📦 Install dependencies
         working-directory: mobile-app
         run: flutter pub get
 
-      # ── 5. Write key.properties for release signing ───────────────────
+      # ── 6. Write key.properties for release signing ───────────────────
       #    Secrets are set in GitHub → Settings → Secrets → Actions
       #    If secrets are not set, falls back to debug signing automatically
       - name: 🔑 Configure release signing (if secrets exist)
