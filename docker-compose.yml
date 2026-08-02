@@ -36,9 +36,10 @@ services:
       DB_USER: ${DB_USER:-neondb_owner}
       DB_PASSWORD: ${DB_PASSWORD:-npg_FBwOPsI5L4fE}
       DB_SSL: ${DB_SSL:-true}
-      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_refresh_in_production}
-      API_KEYS: ${API_KEYS:-}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_access_token_key_2026_video_platform}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-super_secret_jwt_refresh_token_key_2026_video_platform}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-}
     ports:
       - "5000:5000"

@@ -46,23 +46,26 @@ class AuthService extends ChangeNotifier {
       ).timeout(const Duration(seconds: 6));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final token = data['token'] ?? data['accessToken'] ?? '';
-        final user = data['user'] ?? {};
+        final body = jsonDecode(response.body);
+        // Backend returns: { status, message, data: { accessToken, refreshToken, user } }
+        final envelope = body['data'] is Map ? body['data'] : body;
+        final token = envelope['accessToken'] ?? envelope['token'] ?? '';
+        final refreshTok = envelope['refreshToken'] ?? '';
+        final user = envelope['user'] is Map ? envelope['user'] : {};
         final role = (user['role'] ?? _determineRole(cleanIdentifier)).toString().toLowerCase();
         
         await saveSession(
           token: token,
-          refreshToken: data['refreshToken'] ?? '',
+          refreshToken: refreshTok,
           role: role,
-          name: user['name'] ?? user['full_name'] ?? 'User',
+          name: user['full_name']?.toString() ?? user['name']?.toString() ?? 'User',
           email: cleanIdentifier,
           userId: user['id']?.toString() ?? '',
           vendorId: user['vendorId']?.toString() ?? user['vendor_id']?.toString() ?? '',
           isDemoMode: false,
         );
 
-        return {'success': true, 'role': role, 'data': data};
+        return {'success': true, 'role': role, 'data': envelope};
       }
 
       // Server reachable but credentials wrong — do NOT fall through to demo mode
