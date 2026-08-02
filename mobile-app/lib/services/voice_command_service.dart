@@ -78,62 +78,6 @@ class VoiceCommandService {
     }
   }
 
-        _webSpeechRecognition.onResult.listen((event) {
-          try {
-            final results = event.results;
-            if (results != null) {
-              final len = results.length ?? 0;
-              for (var i = 0; i < len; i++) {
-                try {
-                  final item = results[i];
-                  if (item != null) {
-                    final alt = item[0];
-                    final transcript = (alt?.transcript ?? '').toString().toLowerCase().trim();
-                    _processTranscript(transcript);
-                  }
-                } catch (_) {}
-              }
-            }
-          } catch (_) {}
-        });
-
-        _webSpeechRecognition.onEnd.listen((_) {
-          if (_isListening) {
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (_isListening) {
-                try {
-                  _webSpeechRecognition.start();
-                } catch (_) {}
-              }
-            });
-          }
-        });
-
-        _webSpeechRecognition.onError.listen((e) {
-          debugPrint('Web Speech Error: $e');
-          if (_isListening) {
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (_isListening) {
-                try {
-                  _webSpeechRecognition.start();
-                } catch (_) {}
-              }
-            });
-          }
-        });
-
-        try {
-          _webSpeechRecognition.start();
-        } catch (_) {}
-        _onStatusChanged?.call('🎤 Listening for "Start Recording" / "Stop Recording"');
-      } else {
-        _onStatusChanged?.call('🎤 Voice Recognition Active');
-      }
-    } catch (e) {
-      debugPrint('Web speech exception: $e');
-      _onStatusChanged?.call('🎤 Voice Recognition Active');
-    }
-  }
 
   /// Process recognized text with strict matching and debounce
   void _processTranscript(String text) {
