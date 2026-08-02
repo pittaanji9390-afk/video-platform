@@ -20,20 +20,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   bool _isLoading = false;
   bool _isFetching = false;
 
-  // Metrics
-  int _totalVendorsCount = 0;
-  int _totalCandidatesCount = 0;
-  int _totalVideosCount = 0;
-  int _pendingQCCount = 0;
-  int _approvedCount = 0;
-  int _rejectedCount = 0;
-
-  // Data lists
+  // Essential Lists
   final List<Map<String, dynamic>> _vendors = [];
   final List<Map<String, dynamic>> _candidates = [];
   final List<Map<String, dynamic>> _qcSubmissions = [];
-  final List<Map<String, dynamic>> _activities = [];
-  final List<Map<String, dynamic>> _dailyTrends = [];
 
   // Controllers for Add Vendor
   final _vendorNameCtrl = TextEditingController();
@@ -74,7 +64,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
   Future<http.Response> _safeGet(String url, Map<String, String> headers) async {
     try {
-      return await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 12));
+      return await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 10));
     } catch (e) {
       debugPrint('GET failed for $url: $e');
       return http.Response('{}', 500);
@@ -89,57 +79,20 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     try {
       final headers = await AuthService.getAuthHeaders();
 
-      // Fetch 5 API endpoints in parallel safely via _safeGet helper
       final results = await Future.wait([
-        _safeGet('$_apiBaseUrl/admins/dashboard-stats', headers),
         _safeGet('$_apiBaseUrl/vendors', headers),
         _safeGet('$_apiBaseUrl/candidates', headers),
         _safeGet('$_apiBaseUrl/videos', headers),
-        _safeGet('$_apiBaseUrl/notifications?role=admin', headers),
       ]);
 
-      int tempVendorsCount = 0;
-      int tempCandidatesCount = 0;
-      int tempVideosCount = 0;
-      int tempPendingQC = 0;
-      int tempApproved = 0;
-      int tempRejected = 0;
-
-      final List<Map<String, dynamic>> tempTrends = [];
       final List<Map<String, dynamic>> tempVendors = [];
       final List<Map<String, dynamic>> tempCandidates = [];
       final List<Map<String, dynamic>> tempQC = [];
-      final List<Map<String, dynamic>> tempNotifs = [];
 
-      // 1. Stats
+      // 1. Vendors
       if (results[0].statusCode == 200) {
         try {
           final body = jsonDecode(results[0].body);
-          final s = body['data'] ?? {};
-          tempVendorsCount = num.tryParse(s['total_vendors']?.toString() ?? '0')?.toInt() ?? 0;
-          tempCandidatesCount = num.tryParse(s['total_candidates']?.toString() ?? '0')?.toInt() ?? 0;
-          tempVideosCount = num.tryParse(s['total_uploaded_videos']?.toString() ?? '0')?.toInt() ?? 0;
-          tempPendingQC = num.tryParse(s['pending_qc']?.toString() ?? '0')?.toInt() ?? 0;
-          tempApproved = num.tryParse(s['approved']?.toString() ?? '0')?.toInt() ?? 0;
-          tempRejected = num.tryParse(s['rejected']?.toString() ?? '0')?.toInt() ?? 0;
-
-          if (s['daily_trends'] is List) {
-            for (var t in s['daily_trends']) {
-              tempTrends.add({
-                'day': t['day']?.toString() ?? 'Day',
-                'uploaded': num.tryParse(t['uploaded']?.toString() ?? '0')?.toInt() ?? 0,
-                'approved': num.tryParse(t['approved']?.toString() ?? '0')?.toInt() ?? 0,
-                'rejected': num.tryParse(t['rejected']?.toString() ?? '0')?.toInt() ?? 0,
-              });
-            }
-          }
-        } catch (_) {}
-      }
-
-      // 2. Vendors
-      if (results[1].statusCode == 200) {
-        try {
-          final body = jsonDecode(results[1].body);
           final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
           for (var v in items) {
             tempVendors.add({
@@ -149,19 +102,16 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               'contact': v['contact_person']?.toString() ?? 'Contact Person',
               'email': v['email']?.toString() ?? 'vendor@example.com',
               'phone': v['phone']?.toString() ?? 'N/A',
-              'candidates': num.tryParse(v['candidates']?.toString() ?? '0')?.toInt() ?? 0,
-              'videos': num.tryParse(v['videos']?.toString() ?? '0')?.toInt() ?? 0,
               'status': (v['is_active'] ?? true) ? 'Active' : 'Inactive',
             });
           }
-          if (tempVendors.isNotEmpty) tempVendorsCount = tempVendors.length;
         } catch (_) {}
       }
 
-      // 3. Candidates
-      if (results[2].statusCode == 200) {
+      // 2. Candidates
+      if (results[1].statusCode == 200) {
         try {
-          final body = jsonDecode(results[2].body);
+          final body = jsonDecode(results[1].body);
           final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
           for (var c in items) {
             final rawId = c['id']?.toString() ?? '';
@@ -172,53 +122,28 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               'email': c['email']?.toString() ?? 'candidate@example.com',
               'phone': c['phone']?.toString() ?? 'N/A',
               'vendor': c['vendor_name']?.toString() ?? c['company_name']?.toString() ?? 'Vendor',
-              'videos': num.tryParse(c['videos_count']?.toString() ?? '1')?.toInt() ?? 1,
               'status': (c['is_active'] ?? true) ? 'Active' : 'Inactive',
             });
           }
-          if (tempCandidates.isNotEmpty) tempCandidatesCount = tempCandidates.length;
         } catch (_) {}
       }
 
-      // 4. Videos
-      if (results[3].statusCode == 200) {
+      // 3. Videos
+      if (results[2].statusCode == 200) {
         try {
-          final body = jsonDecode(results[3].body);
+          final body = jsonDecode(results[2].body);
           final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
           for (var vid in items) {
             final id = vid['id']?.toString() ?? '';
-            final st = (vid['status'] ?? 'pending').toString().toLowerCase();
             final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-001');
-
-            if (!st.contains('admin_approved') && !st.contains('admin_rejected')) {
-              tempQC.add({
-                'id': shortId,
-                'raw_id': id,
-                'title': vid['title']?.toString() ?? 'Video Recording',
-                'candidateName': vid['candidate_name']?.toString() ?? vid['candidateName']?.toString() ?? 'Candidate',
-                'vendor': vid['vendor_name']?.toString() ?? vid['vendor']?.toString() ?? 'Acme Video Solutions',
-                'duration': '${vid['duration'] ?? 15} Mins',
-                'time': 'Just Now',
-                'env': vid['environment_tag']?.toString() ?? 'Indoor',
-                'score': 95,
-                'status': 'Pending QC',
-                'assignedTo': vid['assigned_to']?.toString() ?? 'Unassigned',
-              });
-            }
-          }
-        } catch (_) {}
-      }
-
-      // 5. Notifications
-      if (results[4].statusCode == 200) {
-        try {
-          final body = jsonDecode(results[4].body);
-          final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
-          for (var n in items) {
-            tempNotifs.add({
-              'title': n['title']?.toString() ?? 'Activity Update',
-              'desc': n['message']?.toString() ?? '',
-              'time': 'Just Now',
+            tempQC.add({
+              'id': shortId,
+              'raw_id': id,
+              'title': vid['title']?.toString() ?? 'Video Recording',
+              'candidateName': vid['candidate_name']?.toString() ?? vid['candidateName']?.toString() ?? 'Candidate',
+              'vendor': vid['vendor_name']?.toString() ?? vid['vendor']?.toString() ?? 'Acme Video Solutions',
+              'duration': '${vid['duration'] ?? 15} Mins',
+              'status': vid['status']?.toString() ?? 'Pending QC',
             });
           }
         } catch (_) {}
@@ -227,32 +152,20 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       // Fallbacks if backend lists are empty to ensure UI never freezes or looks blank
       if (tempVendors.isEmpty) {
         tempVendors.addAll([
-          {'id': 'VEN-001', 'vendor_code': 'VEN-001', 'name': 'Acme Video Solutions', 'contact': 'John Doe', 'email': 'acme@vendor.com', 'phone': '+1 555-0192', 'candidates': 5, 'videos': 12, 'status': 'Active'},
-          {'id': 'VEN-002', 'vendor_code': 'VEN-002', 'name': 'Global Media Partners', 'contact': 'Sarah Smith', 'email': 'global@vendor.com', 'phone': '+1 555-0193', 'candidates': 3, 'videos': 8, 'status': 'Active'},
+          {'id': 'VEN-001', 'vendor_code': 'VEN-001', 'name': 'Acme Video Solutions', 'contact': 'John Doe', 'email': 'acme@vendor.com', 'phone': '+1 555-0192', 'status': 'Active'},
+          {'id': 'VEN-002', 'vendor_code': 'VEN-002', 'name': 'Global Media Partners', 'contact': 'Sarah Smith', 'email': 'global@vendor.com', 'phone': '+1 555-0193', 'status': 'Active'},
         ]);
-        if (tempVendorsCount == 0) tempVendorsCount = 2;
       }
 
       if (tempCandidates.isEmpty) {
         tempCandidates.addAll([
-          {'id': 'CND-001', 'name': 'Alex Johnson', 'email': 'alex@example.com', 'phone': '+1 555-0101', 'vendor': 'Acme Video Solutions', 'videos': 2, 'status': 'Active'},
-          {'id': 'CND-002', 'name': 'Emily Davis', 'email': 'emily@example.com', 'phone': '+1 555-0102', 'vendor': 'Global Media Partners', 'videos': 1, 'status': 'Active'},
+          {'id': 'CND-001', 'name': 'Alex Johnson', 'email': 'alex@example.com', 'phone': '+1 555-0101', 'vendor': 'Acme Video Solutions', 'status': 'Active'},
+          {'id': 'CND-002', 'name': 'Emily Davis', 'email': 'emily@example.com', 'phone': '+1 555-0102', 'vendor': 'Global Media Partners', 'status': 'Active'},
         ]);
-        if (tempCandidatesCount == 0) tempCandidatesCount = 2;
       }
 
       if (mounted) {
         setState(() {
-          _totalVendorsCount = tempVendorsCount > 0 ? tempVendorsCount : tempVendors.length;
-          _totalCandidatesCount = tempCandidatesCount > 0 ? tempCandidatesCount : tempCandidates.length;
-          _totalVideosCount = tempVideosCount > 0 ? tempVideosCount : (tempApproved + tempRejected + tempPendingQC > 0 ? (tempApproved + tempRejected + tempPendingQC) : (tempQC.length > 0 ? tempQC.length : 1));
-          _pendingQCCount = tempPendingQC > 0 ? tempPendingQC : tempQC.length;
-          _approvedCount = tempApproved;
-          _rejectedCount = tempRejected;
-
-          _dailyTrends.clear();
-          _dailyTrends.addAll(tempTrends);
-
           _vendors.clear();
           _vendors.addAll(tempVendors);
 
@@ -261,13 +174,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
           _qcSubmissions.clear();
           _qcSubmissions.addAll(tempQC);
-
-          _activities.clear();
-          _activities.addAll(tempNotifs);
         });
       }
     } catch (e) {
-      debugPrint('Dashboard data load exception: $e');
+      debugPrint('Minimal Dashboard data load exception: $e');
     } finally {
       _isFetching = false;
       if (mounted) {
@@ -300,10 +210,27 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1E3A8A),
+        elevation: 0,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Admin Control Center', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Platform Management', style: TextStyle(color: Colors.white70, fontSize: 11)),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: Color(0xFFFCA5A5)),
+            onPressed: _handleLogout,
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
       body: IndexedStack(
-        index: _activeNavIndex.clamp(0, 3),
+        index: _activeNavIndex.clamp(0, 2),
         children: [
-          _buildMainDashboardTab(),
           _buildVendorsTab(),
           _buildCandidatesTab(),
           _buildQCTab(),
@@ -319,7 +246,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           children: [
             const PoweredByFooter(),
             BottomNavigationBar(
-              currentIndex: _activeNavIndex.clamp(0, 3),
+              currentIndex: _activeNavIndex.clamp(0, 2),
               onTap: (idx) => setState(() => _activeNavIndex = idx),
               backgroundColor: Colors.white,
               selectedItemColor: const Color(0xFF2563EB),
@@ -329,7 +256,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               unselectedFontSize: 11,
               selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
               items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Dashboard'),
                 BottomNavigationBarItem(icon: Icon(Icons.storefront_rounded), label: 'Vendors'),
                 BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Candidates'),
                 BottomNavigationBarItem(icon: Icon(Icons.verified_user_rounded), label: 'QC Queue'),
@@ -341,152 +267,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
-  // 1. MAIN DASHBOARD TAB
-  Widget _buildMainDashboardTab() {
-    final calcTotal = _totalVideosCount > 0 ? _totalVideosCount : (_approvedCount + _rejectedCount + _pendingQCCount);
-    final approvedPct = calcTotal > 0 ? ((_approvedCount / calcTotal) * 100).toStringAsFixed(1) : '0.0';
-
-    return RefreshIndicator(
-      onRefresh: _loadDashboardData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Curved Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.only(top: 48, left: 20, right: 20, bottom: 28),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF2563EB)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(28),
-                  bottomRight: Radius.circular(28),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Admin Dashboard', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                          Text('Platform Management & Control', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.logout_rounded, color: Color(0xFFFCA5A5)),
-                        onPressed: _handleLogout,
-                        tooltip: 'Logout',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  const Text('Hello, Admin 👋', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
-                  const SizedBox(height: 4),
-                  const Text("Here's what's happening today", style: TextStyle(fontSize: 13, color: Colors.white70)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Top Cards Horizontal Scroll
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildStatCard('Total Vendors', '${_totalVendorsCount > 0 ? _totalVendorsCount : _vendors.length}', 'Active', const Color(0xFF16A34A), Icons.storefront_rounded, const Color(0xFF2563EB), const Color(0xFFEFF6FF)),
-                  const SizedBox(width: 12),
-                  _buildStatCard('Total Candidates', '${_totalCandidatesCount > 0 ? _totalCandidatesCount : _candidates.length}', 'Registered', const Color(0xFF9333EA), Icons.people_rounded, const Color(0xFF9333EA), const Color(0xFFF3E8FF)),
-                  const SizedBox(width: 12),
-                  _buildStatCard('Total Videos', '$calcTotal', 'Uploaded', const Color(0xFF0284C7), Icons.videocam_rounded, const Color(0xFF0284C7), const Color(0xFFE0F2FE)),
-                  const SizedBox(width: 12),
-                  _buildStatCard('Pending QC', '$_pendingQCCount', 'Review', const Color(0xFFD97706), Icons.assignment_rounded, const Color(0xFFD97706), const Color(0xFFFEF3C7)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Uploads Overview Card (Clean Standard Widgets)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Uploads Overview', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      Text('Approval Rate: $approvedPct%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: calcTotal > 0 ? (_approvedCount / calcTotal).clamp(0.0, 1.0) : 0.0,
-                      minHeight: 10,
-                      backgroundColor: const Color(0xFFEFF6FF),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildOverviewStatBadge('Approved', '$_approvedCount', const Color(0xFF16A34A)),
-                      _buildOverviewStatBadge('Pending QC', '$_pendingQCCount', const Color(0xFFD97706)),
-                      _buildOverviewStatBadge('Rejected', '$_rejectedCount', const Color(0xFFDC2626)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Quick Actions Horizontal Row
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildQuickActionBtn(Icons.storefront_rounded, 'Vendor\nManagement', const Color(0xFF0284C7), () => setState(() => _activeNavIndex = 1)),
-                  const SizedBox(width: 12),
-                  _buildQuickActionBtn(Icons.people_rounded, 'Candidate\nRoster', const Color(0xFF9333EA), () => setState(() => _activeNavIndex = 2)),
-                  const SizedBox(width: 12),
-                  _buildQuickActionBtn(Icons.verified_user_rounded, 'QC Review\nPanel', const Color(0xFF16A34A), () => setState(() => _activeNavIndex = 3)),
-                  const SizedBox(width: 12),
-                  _buildQuickActionBtn(Icons.description_rounded, 'Reports &\nExport', const Color(0xFF2563EB), () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv')),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 2. VENDORS TAB
+  // 1. VENDORS TAB
   Widget _buildVendorsTab() {
     return SafeArea(
       child: RefreshIndicator(
@@ -500,11 +281,11 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Vendor Directory', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      Text('Registered Partner Companies', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      const Text('Vendor Directory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      Text('Total Registered: ${_vendors.length}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                     ],
                   ),
                   ElevatedButton.icon(
@@ -516,10 +297,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 ],
               ),
               const SizedBox(height: 16),
-              if (_vendors.isEmpty)
+              if (_isLoading && _vendors.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: Text('No Vendors Registered Yet', style: TextStyle(color: Color(0xFF94A3B8)))),
+                  child: Center(child: CircularProgressIndicator()),
                 )
               else
                 ListView.builder(
@@ -571,7 +352,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
-  // 3. CANDIDATES TAB
+  // 2. CANDIDATES TAB
   Widget _buildCandidatesTab() {
     return SafeArea(
       child: RefreshIndicator(
@@ -582,13 +363,13 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Candidate Directory', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-              const Text('Registered Subjects & Record Profiles', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              Text('Candidate Directory', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              Text('Total Registered: ${_candidates.length}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
               const SizedBox(height: 16),
-              if (_candidates.isEmpty)
+              if (_isLoading && _candidates.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: Text('No Candidates Registered Yet', style: TextStyle(color: Color(0xFF94A3B8)))),
+                  child: Center(child: CircularProgressIndicator()),
                 )
               else
                 ListView.builder(
@@ -624,7 +405,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
-  // 4. QC QUEUE TAB
+  // 3. QC QUEUE TAB
   Widget _buildQCTab() {
     return SafeArea(
       child: RefreshIndicator(
@@ -638,11 +419,11 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('QC Review Queue', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      Text('Candidate Uploaded Video Queue', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      const Text('QC Review Queue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      Text('Total Submissions: ${_qcSubmissions.length}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                     ],
                   ),
                   ElevatedButton.icon(
@@ -654,10 +435,15 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 ],
               ),
               const SizedBox(height: 16),
-              if (_qcSubmissions.isEmpty)
+              if (_isLoading && _qcSubmissions.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: Text('No Pending Videos in QC Queue', style: TextStyle(color: Color(0xFF94A3B8)))),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_qcSubmissions.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: Text('No Submissions in QC Queue', style: TextStyle(color: Color(0xFF94A3B8)))),
                 )
               else
                 ListView.builder(
@@ -699,61 +485,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String val, String subtext, Color subColor, IconData icon, Color iconColor, Color iconBg) {
-    return Container(
-      width: 140,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(val, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-          const SizedBox(height: 4),
-          Text(subtext, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: subColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionBtn(IconData icon, String label, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 120,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 8),
-            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-          ],
         ),
       ),
     );
@@ -826,22 +557,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-  Widget _buildOverviewStatBadge(String label, String val, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
-          const SizedBox(height: 2),
-          Text(val, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color)),
-        ],
       ),
     );
   }
