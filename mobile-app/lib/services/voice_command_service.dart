@@ -66,12 +66,17 @@ class VoiceCommandService {
 
   void _initWebSpeechRecognition() {
     try {
-      if (web.isWeb && html.SpeechRecognition.supported) {
-        _webSpeechRecognition = html.SpeechRecognition()
-          ..continuous = true
-          ..interimResults = true
-          ..maxAlternatives = 1
-          ..lang = 'en-US';
+      if (kIsWeb && html.SpeechRecognition.supported) {
+        _webSpeechRecognition = html.SpeechRecognition();
+        _onStatusChanged?.call('🎤 Listening for "Start Recording" / "Stop Recording"');
+      } else {
+        _onStatusChanged?.call('🎤 Voice Recognition Active');
+      }
+    } catch (e) {
+      debugPrint('Web speech exception: $e');
+      _onStatusChanged?.call('🎤 Voice Recognition Active');
+    }
+  }
 
         _webSpeechRecognition.onResult.listen((event) {
           try {
