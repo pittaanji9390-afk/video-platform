@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/update_service.dart';
 import '../../widgets/powered_by_footer.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -18,6 +19,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkSessionAndNavigate() async {
+    // Check for in-app updates in background
+    UpdateService.checkForUpdates(context);
+
     // Smooth splash load delay (1.5s) to display branding
     await Future.delayed(const Duration(milliseconds: 1500));
 
