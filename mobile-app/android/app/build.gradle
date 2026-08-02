@@ -29,19 +29,11 @@ android {
 
     signingConfigs {
         release {
-            // Use keystore if key.properties exists (CI/CD release build)
-            // Otherwise falls back to debug signing (local development)
             if (keystorePropertiesFile.exists()) {
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
-            } else {
-                // Fallback: debug signing for local builds
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-                storeFile file("${System.getProperty('user.home')}/.android/debug.keystore")
-                storePassword 'android'
             }
         }
     }
@@ -59,7 +51,11 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.release
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled false
             shrinkResources false
         }

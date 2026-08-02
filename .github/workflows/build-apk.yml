@@ -54,7 +54,17 @@ jobs:
           echo "flutter.versionName=1.0.0" >> local.properties
           cat local.properties
 
-      # ── 5. Install Flutter dependencies ──────────────────────────────
+      # ── 5. Ensure debug keystore exists for fallback signing ───────
+      - name: 🔑 Ensure debug keystore exists
+        run: |
+          mkdir -p $HOME/.android
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkey -v -keystore $HOME/.android/debug.keystore -storepass android \
+              -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
+      # ── 6. Install Flutter dependencies ──────────────────────────────
       - name: 📦 Install dependencies
         working-directory: mobile-app
         run: flutter pub get
