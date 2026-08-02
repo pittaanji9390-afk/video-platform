@@ -148,4 +148,99 @@ class AuthService extends ChangeNotifier {
     await prefs.remove(keyUserId);
     await prefs.remove(keyVendorId);
   }
+
+  /// Returns the stored user ID (empty string if not set).
+  static Future<String> getUserId() async {
+    final prefs = await _getPrefs();
+    return prefs.getString(keyUserId) ?? '';
+  }
+
+  /// Registers a new candidate account on the backend.
+  /// Falls back to demo mode if the server is unreachable.
+  static Future<Map<String, dynamic>> signupCandidate({
+    required String email,
+    required String password,
+    required String vendorCode,
+    String? fullName,
+    String? phone,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+
+    try {
+      final url = Uri.parse('$baseUrl/auth/register');
+      final body = <String, dynamic>{
+        'email': cleanEmail,
+        'password': password,
+        'vendor_code': vendorCode.trim(),
+        'role': 'candidate',
+      };
+      if (fullName != null && fullName.trim().isNotEmpty) {
+        body['full_name'] = fullName.trim();
+      }
+      if (phone != null && phone.trim().isNotEmpty) {
+        body['phone'] = phone.trim();
+      }
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final token = data['token'] ?? data['accessToken'] ?? 'demo_token';
+        final user = data['user'] ?? {};
+
+        await saveSession(
+          token: token,
+          refreshToken: data['refreshToken'] ?? '',
+          role: 'candidate',
+          name: user['name'] ?? fullName ?? cleanEmail,
+          email: cleanEmail,
+          userId: user['id']?.toString() ?? 'candidate_${DateTime.now().millisecondsSinceEpoch}',
+          vendorId: vendorCode.trim(),
+        );
+
+        return {
+          'success': true,
+          'message': 'Registration successful! Welcome to ElevateIQ.',
+          'data': data,
+        };
+      }
+
+      // Server returned an error — surface the message
+      try {
+        final err = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': err['message'] ?? err['error'] ?? 'Registration failed (${response.statusCode})',
+        };
+      } catch (_) {
+        return {
+          'success': false,
+          'message': 'Registration failed (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      debugPrint('signupCandidate exception: $e');
+    }
+
+    // Demo Mode Fallback
+    await saveSession(
+      token: 'demo_token_${DateTime.now().millisecondsSinceEpoch}',
+      refreshToken: 'demo_refresh',
+      role: 'candidate',
+      name: fullName ?? cleanEmail,
+      email: cleanEmail,
+      userId: 'demo_candidate_${DateTime.now().millisecondsSinceEpoch}',
+      vendorId: vendorCode.trim(),
+    );
+
+    return {
+      'success': true,
+      'isDemo': true,
+      'message': 'Registered successfully (demo mode). Opening Candidate Portal...',
+    };
+  }
 }
