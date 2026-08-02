@@ -35,11 +35,11 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      # ── 3. Set up Flutter stable ──────────────────────────────────────
+      # ── 3. Set up Flutter stable ───────────────────────────────────────
       - name: 🐦 Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.32.0'
           channel: 'stable'
           cache: true
 
@@ -77,37 +77,33 @@ jobs:
 
           echo "✅ Signing config written"
 
-      # ── 6. Build APK ──────────────────────────────────────────────────
-      - name: 🔨 Build Debug APK
-        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == ''
-        working-directory: mobile-app
-        run: |
-          flutter build apk --debug \
-            --build-name="1.0.${{ github.run_number }}" \
-            --build-number=${{ github.run_number }}
-          echo "BUILD_TYPE=debug" >> $GITHUB_ENV
-          echo "APK_PATH=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_ENV
-
-      - name: 🚀 Build Release APK
-        if: github.event.inputs.build_type == 'release'
-        working-directory: mobile-app
-        run: |
-          flutter build apk --release \
-            --build-name="1.0.${{ github.run_number }}" \
-            --build-number=${{ github.run_number }}
-          echo "BUILD_TYPE=release" >> $GITHUB_ENV
-          echo "APK_PATH=build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_ENV
-
-      # Default: build debug if triggered by push (not manual)
-      - name: 🔨 Build APK (auto push trigger → debug)
+      # ── 6. Build APK ────────────────────────────────────────────
+      - name: 🔨 Build Debug APK (push trigger)
         if: github.event_name == 'push'
         working-directory: mobile-app
         run: |
           flutter build apk --debug \
             --build-name="1.0.${{ github.run_number }}" \
             --build-number=${{ github.run_number }}
-          echo "BUILD_TYPE=debug" >> $GITHUB_ENV
           echo "APK_PATH=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_ENV
+
+      - name: 🔨 Build Debug APK (manual - debug)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'debug'
+        working-directory: mobile-app
+        run: |
+          flutter build apk --debug \
+            --build-name="1.0.${{ github.run_number }}" \
+            --build-number=${{ github.run_number }}
+          echo "APK_PATH=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_ENV
+
+      - name: 🚀 Build Release APK (manual - release)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release'
+        working-directory: mobile-app
+        run: |
+          flutter build apk --release \
+            --build-name="1.0.${{ github.run_number }}" \
+            --build-number=${{ github.run_number }}
+          echo "APK_PATH=build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_ENV
 
       # ── 7. Show APK info ──────────────────────────────────────────────
       - name: 📊 APK Info
