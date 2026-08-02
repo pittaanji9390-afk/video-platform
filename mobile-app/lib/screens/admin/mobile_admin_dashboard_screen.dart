@@ -17,6 +17,7 @@ class MobileAdminDashboardScreen extends StatefulWidget {
 
 class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen> {
   int _activeNavIndex = 0;
+  bool _isLoading = false;
   bool _isFetching = false;
 
   // Metrics
@@ -710,7 +711,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
               child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(height: 8),
