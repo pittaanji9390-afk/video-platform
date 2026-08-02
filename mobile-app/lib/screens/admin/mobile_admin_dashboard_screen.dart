@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../core/constants/api_constants.dart';
-import '../../core/theme/app_colors.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/powered_by_footer.dart';
@@ -18,9 +17,7 @@ class MobileAdminDashboardScreen extends StatefulWidget {
 
 class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen> {
   int _activeNavIndex = 0;
-  bool _isLoading = false;
   bool _isFetching = false;
-  String _selectedTimeframe = 'This Week';
 
   // Metrics
   int _totalVendorsCount = 0;
@@ -713,7 +710,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(height: 8),
@@ -734,7 +731,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('Add New Vendor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           content: SingleChildScrollView(
@@ -760,7 +757,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () async {
                 final company = _vendorNameCtrl.text.trim();
@@ -783,7 +780,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 } catch (_) {}
 
                 if (mounted) {
-                  Navigator.pop(ctx);
+                  Navigator.pop(dialogCtx);
                   _loadDashboardData();
                 }
               },
