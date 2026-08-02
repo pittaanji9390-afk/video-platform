@@ -1,0 +1,87 @@
+name: 🚀 Deploy to VPS
+
+# Triggers: push to main (backend/infra changes only), or manually
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'mobile-app/**'           # APK workflow handles this
+      - '**.md'
+      - 'terraform/**'            # Terraform runs locally, not in CI
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deploy'
+        required: false
+        default: 'Manual deployment'
+
+jobs:
+  deploy:
+    name: 🚀 Git Pull + Docker Compose Up
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy — git pull + docker compose up
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          command_timeout: 300s
+          script: |
+            set -e
+
+            echo "==========================================="
+            echo "  Video Platform — Rolling Deploy"
+            echo "  Triggered by : ${{ github.actor }}"
+            echo "  Commit       : ${{ github.sha }}"
+            echo "  Reason       : ${{ github.event.inputs.reason || 'push to main' }}"
+            echo "==========================================="
+
+            cd /var/www/video-platform
+
+            # Pull latest code
+            git fetch origin main
+            git reset --hard origin/main
+            echo "✅ Code updated to: $(git rev-parse --short HEAD)"
+
+            # Rebuild and restart containers
+            docker compose up --build -d --remove-orphans
+            echo "✅ Containers restarted"
+
+            # Wait and verify
+            sleep 20
+            HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health || echo "000")
+            if [ "$HEALTH" = "200" ]; then
+              echo "✅ Health check PASSED (HTTP $HEALTH)"
+            else
+              echo "⚠️  Health check returned HTTP $HEALTH — showing logs:"
+              docker compose logs backend --tail=40
+              exit 1
+            fi
+
+            echo ""
+            echo "Container status:"
+            docker compose ps
+
+            echo ""
+            echo "==========================================="
+            echo "  ✅ DEPLOY COMPLETE!"
+            echo "  API: https://elevateiq-softtech.com/video-platform-api/"
+            echo "  App: https://elevateiq-softtech.com/video-platform/"
+            echo "==========================================="
+
+      - name: ✅ Success
+        if: success()
+        run: echo "🎉 Deployment successful! https://elevateiq-softtech.com/video-platform-api/health"
+
+      - name: ❌ Failed
+        if: failure()
+        run: |
+          echo "💥 Deployment failed. Check logs above."
+          exit 1

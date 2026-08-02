@@ -1,0 +1,91 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+.npm
+.eslintcache
+
+# Production builds
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+Thumbs.db
+
+# Flutter & Mobile
+.dart_tool/
+.fvm/
+.idea/
+.pub-cache/
+.pub/
+build/
+*.flutter-plugins
+*.flutter-plugins-dependencies
+
+# Database / uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/src/uploads/*
+!backend/src/uploads/.gitkeep
+
+# Android signing — NEVER commit these
+mobile-app/android/key.properties
+mobile-app/android/app/*.jks
+mobile-app/android/app/*.keystore
+
+# Diagnostic / one-off scripts (contain DB credentials)
+db_audit.js
+db_fix.js
+final_verify.js
+
+# ─── Terraform ────────────────────────────────────────────────────────────────
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files (contain sensitive state — keep these local only)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Secret variable files — NEVER commit these
+terraform/*.tfvars
+terraform/*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform lock file (optional — include if you want reproducible provider versions)
+# .terraform.lock.hcl
+

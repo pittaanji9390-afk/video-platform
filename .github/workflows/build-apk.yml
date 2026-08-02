@@ -1,0 +1,155 @@
+name: 🤖 Build Android APK
+
+# Triggers: every push to main branch, or manually via GitHub UI
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'mobile-app/**'        # Only run when Flutter code changes
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:           # Manual trigger — click "Run workflow" in GitHub Actions tab
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+jobs:
+  build-apk:
+    name: Build Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout code ──────────────────────────────────────────────
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Java 17 (required by Flutter Android build) ─────────
+      - name: ☕ Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # ── 3. Set up Flutter stable ──────────────────────────────────────
+      - name: 🐦 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      # ── 4. Install Flutter dependencies ──────────────────────────────
+      - name: 📦 Install dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      # ── 5. Write key.properties for release signing ───────────────────
+      #    Secrets are set in GitHub → Settings → Secrets → Actions
+      #    If secrets are not set, falls back to debug signing automatically
+      - name: 🔑 Configure release signing (if secrets exist)
+        if: |
+          github.event.inputs.build_type == 'release' &&
+          secrets.KEYSTORE_BASE64 != '' &&
+          secrets.KEY_ALIAS != ''
+        working-directory: mobile-app/android
+        run: |
+          # Decode base64 keystore → app/upload-keystore.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/upload-keystore.jks
+
+          # Write key.properties file
+          cat > key.properties << EOF
+          storePassword=${{ secrets.STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          EOF
+
+          echo "✅ Signing config written"
+
+      # ── 6. Build APK ──────────────────────────────────────────────────
+      - name: 🔨 Build Debug APK
+        if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == ''
+        working-directory: mobile-app
+        run: |
+          flutter build apk --debug \
+            --build-name="1.0.${{ github.run_number }}" \
+            --build-number=${{ github.run_number }}
+          echo "BUILD_TYPE=debug" >> $GITHUB_ENV
+          echo "APK_PATH=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_ENV
+
+      - name: 🚀 Build Release APK
+        if: github.event.inputs.build_type == 'release'
+        working-directory: mobile-app
+        run: |
+          flutter build apk --release \
+            --build-name="1.0.${{ github.run_number }}" \
+            --build-number=${{ github.run_number }}
+          echo "BUILD_TYPE=release" >> $GITHUB_ENV
+          echo "APK_PATH=build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_ENV
+
+      # Default: build debug if triggered by push (not manual)
+      - name: 🔨 Build APK (auto push trigger → debug)
+        if: github.event_name == 'push'
+        working-directory: mobile-app
+        run: |
+          flutter build apk --debug \
+            --build-name="1.0.${{ github.run_number }}" \
+            --build-number=${{ github.run_number }}
+          echo "BUILD_TYPE=debug" >> $GITHUB_ENV
+          echo "APK_PATH=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_ENV
+
+      # ── 7. Show APK info ──────────────────────────────────────────────
+      - name: 📊 APK Info
+        working-directory: mobile-app
+        run: |
+          APK_FILE=$(find build/app/outputs/flutter-apk/ -name "*.apk" | head -1)
+          echo "APK file: $APK_FILE"
+          ls -lh "$APK_FILE"
+          echo "Size: $(du -sh "$APK_FILE" | cut -f1)"
+
+      # ── 8. Upload APK as artifact (downloadable from GitHub Actions) ──
+      - name: 📤 Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoDataCollection-APK-${{ github.run_number }}
+          path: |
+            mobile-app/build/app/outputs/flutter-apk/app-debug.apk
+            mobile-app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      # ── 9. Create GitHub Release (only on push to main) ───────────────
+      - name: 🏷️ Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Video Platform APK v1.0.${{ github.run_number }}"
+          body: |
+            ## 📱 Video Data Collection Platform APK
+
+            **Build:** #${{ github.run_number }}
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+
+            ### How to install:
+            1. Download the `.apk` file below
+            2. Transfer to your Android device
+            3. Enable "Install from unknown sources" in phone settings
+            4. Tap the APK file to install
+
+            ### What's included:
+            - Candidate login & video recording
+            - Admin, Vendor, QC team dashboards
+            - Video upload to backend
+          files: |
+            mobile-app/build/app/outputs/flutter-apk/app-debug.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

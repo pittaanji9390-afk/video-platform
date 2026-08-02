@@ -1,0 +1,80 @@
+services:
+  # 1. PostgreSQL Database Container
+  postgres:
+    image: postgres:15-alpine
+    container_name: videoplatform_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-videoplatform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-videoplatform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend_net
+
+  # 2. Node.js Express Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: videoplatform_backend
+    restart: always
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_FBwOPsI5L4fE@ep-young-leaf-axv340na-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require}
+      DB_HOST: ${DB_HOST:-ep-young-leaf-axv340na-pooler.c-4.us-east-2.aws.neon.tech}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-neondb}
+      DB_USER: ${DB_USER:-neondb_owner}
+      DB_PASSWORD: ${DB_PASSWORD:-npg_FBwOPsI5L4fE}
+      DB_SSL: ${DB_SSL:-true}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_refresh_in_production}
+      API_KEYS: ${API_KEYS:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - video_uploads:/app/uploads/videos
+    networks:
+      - backend_net
+
+  # 3. Flutter Web Frontend Service (Nginx)
+  frontend:
+    build:
+      context: ./mobile-app
+      dockerfile: Dockerfile
+    container_name: videoplatform_frontend
+    restart: always
+    ports:
+      - "8081:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - backend_net
+
+volumes:
+  postgres_data:
+  # Persistent storage for uploaded video files — survives container restarts
+  video_uploads:
+
+networks:
+  backend_net:
+    driver: bridge
