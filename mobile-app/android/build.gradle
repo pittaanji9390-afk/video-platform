@@ -17,6 +17,16 @@ subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            android {
+                compileSdkVersion 34
+            }
+        }
+    }
+}
+
+subprojects {
     project.evaluationDependsOn(':app')
 }
 
