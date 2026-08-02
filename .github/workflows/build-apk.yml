@@ -4,9 +4,6 @@ name: 🤖 Build Android APK
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'mobile-app/**'        # Only run when Flutter code changes
-      - '.github/workflows/build-apk.yml'
   workflow_dispatch:           # Manual trigger — click "Run workflow" in GitHub Actions tab
     inputs:
       build_type:
