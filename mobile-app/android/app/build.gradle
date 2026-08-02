@@ -50,8 +50,8 @@ android {
         applicationId "com.videoplatform.mobile_app"
         minSdkVersion 21
         targetSdkVersion 34
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        versionCode project.hasProperty('flutterVersionCode') ? flutterVersionCode.toInteger() : 1
+        versionName project.hasProperty('flutterVersionName') ? flutterVersionName : "1.0.0"
     }
 
     buildTypes {
