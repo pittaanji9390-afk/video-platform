@@ -20,6 +20,7 @@ class MobileAdminDashboardScreen extends StatefulWidget {
 class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen> {
   int _activeNavIndex = 0; // 0: Dashboard, 1: Vendors, 2: Candidates, 3: QC Review
   bool _isLoading = false;
+  bool _isFetchingData = false;
   String _selectedTimeframe = 'This Week';
 
   // Dynamic Stats State
@@ -731,54 +732,77 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   String get _apiBaseUrl => '${ApiConstants.baseUrl}${ApiConstants.apiVersion}';
 
   Future<void> _loadRealDashboardData() async {
-    if (!mounted) return;
+    if (!mounted || _isFetchingData) return;
+    _isFetchingData = true;
     setState(() => _isLoading = true);
+
     try {
       final headers = await AuthService.getAuthHeaders();
 
-      // 1. Fetch Admin Dashboard Statistics from PostgreSQL
-      try {
-        final statsUri = Uri.parse('$_apiBaseUrl/admins/dashboard-stats');
-        final statsRes = await http.get(statsUri, headers: headers).timeout(const Duration(seconds: 4));
-        if (statsRes.statusCode == 200) {
+      // Parallel fetching for all 5 admin endpoints to avoid sequential network delays
+      final results = await Future.wait([
+        http.get(Uri.parse('$_apiBaseUrl/admins/dashboard-stats'), headers: headers).timeout(const Duration(seconds: 5)).catchError((_) => http.Response('', 500)),
+        http.get(Uri.parse('$_apiBaseUrl/vendors'), headers: headers).timeout(const Duration(seconds: 5)).catchError((_) => http.Response('', 500)),
+        http.get(Uri.parse('$_apiBaseUrl/candidates'), headers: headers).timeout(const Duration(seconds: 5)).catchError((_) => http.Response('', 500)),
+        http.get(Uri.parse('$_apiBaseUrl/videos'), headers: headers).timeout(const Duration(seconds: 5)).catchError((_) => http.Response('', 500)),
+        http.get(Uri.parse('$_apiBaseUrl/notifications?role=admin'), headers: headers).timeout(const Duration(seconds: 5)).catchError((_) => http.Response('', 500)),
+      ]);
+
+      final statsRes = results[0];
+      final vendorsRes = results[1];
+      final candidatesRes = results[2];
+      final videosRes = results[3];
+      final notifRes = results[4];
+
+      // Local temp variables for atomic state update
+      int tempVendorsCount = 0;
+      int tempCandidatesCount = 0;
+      int tempVideosCount = 0;
+      int tempPendingQCCount = 0;
+      int tempApprovedCount = 0;
+      int tempRejectedCount = 0;
+      final List<Map<String, dynamic>> tempDailyTrends = [];
+      final List<Map<String, dynamic>> tempVendors = [];
+      final List<Map<String, dynamic>> tempCandidates = [];
+      final List<Map<String, dynamic>> tempQCSubmissions = [];
+      final List<Map<String, dynamic>> tempActivities = [];
+
+      // 1. Process Stats Response
+      if (statsRes.statusCode == 200) {
+        try {
           final data = jsonDecode(statsRes.body);
           final s = data['data'] ?? {};
-          _totalVendorsCount = s['total_vendors'] ?? 0;
-          _totalCandidatesCount = s['total_candidates'] ?? 0;
-          _totalVideosCount = s['total_uploaded_videos'] ?? 0;
-          _pendingQCCount = s['pending_qc'] ?? 0;
-          _approvedCount = s['approved'] ?? 0;
-          _rejectedCount = s['rejected'] ?? 0;
+          tempVendorsCount = s['total_vendors'] ?? 0;
+          tempCandidatesCount = s['total_candidates'] ?? 0;
+          tempVideosCount = s['total_uploaded_videos'] ?? 0;
+          tempPendingQCCount = s['pending_qc'] ?? 0;
+          tempApprovedCount = s['approved'] ?? 0;
+          tempRejectedCount = s['rejected'] ?? 0;
 
-          // Parse daily_trends for chart
-          _dailyTrends.clear();
           final trends = s['daily_trends'];
           if (trends is List) {
             for (var t in trends) {
-              _dailyTrends.add({
-                'day': t['day'] ?? '',
-                'uploaded': t['uploaded'] ?? 0,
-                'approved': t['approved'] ?? 0,
-                'rejected': t['rejected'] ?? 0,
+              tempDailyTrends.add({
+                'day': t['day']?.toString() ?? '',
+                'uploaded': num.tryParse(t['uploaded']?.toString() ?? '0')?.toInt() ?? 0,
+                'approved': num.tryParse(t['approved']?.toString() ?? '0')?.toInt() ?? 0,
+                'rejected': num.tryParse(t['rejected']?.toString() ?? '0')?.toInt() ?? 0,
               });
             }
           }
+        } catch (e) {
+          debugPrint('Stats parse error: $e');
         }
-      } catch (e) {
-        debugPrint('Stats fetch error: $e');
       }
 
-      // 2. Fetch Vendors from PostgreSQL
-      try {
-        final vendorsUri = Uri.parse('$_apiBaseUrl/vendors');
-        final vendorsRes = await http.get(vendorsUri, headers: headers).timeout(const Duration(seconds: 4));
-        if (vendorsRes.statusCode == 200) {
+      // 2. Process Vendors Response
+      if (vendorsRes.statusCode == 200) {
+        try {
           final data = jsonDecode(vendorsRes.body);
           final rawData = data['data'];
           final List<dynamic> items = rawData is List ? rawData : (rawData?['items'] ?? []);
-          _vendors.clear();
           for (var v in items) {
-            _vendors.add({
+            tempVendors.add({
               'id': v['id'] ?? v['vendor_code'] ?? 'VEN-001',
               'vendor_code': v['vendor_code'] ?? 'VEN-001',
               'name': v['name'] ?? v['company_name'] ?? 'Vendor Company',
@@ -791,27 +815,24 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               'status': (v['is_active'] ?? true) ? 'Active' : 'Inactive',
             });
           }
-          if (_vendors.isNotEmpty) {
-            _totalVendorsCount = _vendors.length;
+          if (tempVendors.isNotEmpty) {
+            tempVendorsCount = tempVendors.length;
           }
+        } catch (e) {
+          debugPrint('Vendors parse error: $e');
         }
-      } catch (e) {
-        debugPrint('Vendors fetch error: $e');
       }
 
-      // 3. Fetch Candidates from PostgreSQL
-      try {
-        final candidatesUri = Uri.parse('$_apiBaseUrl/candidates');
-        final candidatesRes = await http.get(candidatesUri, headers: headers).timeout(const Duration(seconds: 4));
-        if (candidatesRes.statusCode == 200) {
+      // 3. Process Candidates Response
+      if (candidatesRes.statusCode == 200) {
+        try {
           final data = jsonDecode(candidatesRes.body);
           final rawData = data['data'];
           final List<dynamic> items = rawData is List ? rawData : (rawData?['items'] ?? []);
-          _candidates.clear();
           for (var c in items) {
             final rawId = c['id']?.toString() ?? '';
             final displayId = rawId.isNotEmpty ? (rawId.length >= 8 ? rawId.substring(0, 8) : rawId) : 'CND-001';
-            _candidates.add({
+            tempCandidates.add({
               'id': displayId,
               'name': c['full_name'] ?? 'Candidate Name',
               'email': c['email'] ?? 'candidate@example.com',
@@ -821,128 +842,114 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               'status': (c['is_active'] ?? true) ? 'Active' : 'Inactive',
             });
           }
-          if (_candidates.isNotEmpty) {
-            _totalCandidatesCount = _candidates.length;
+          if (tempCandidates.isNotEmpty) {
+            tempCandidatesCount = tempCandidates.length;
           }
+        } catch (e) {
+          debugPrint('Candidates parse error: $e');
         }
-      } catch (e) {
-        debugPrint('Candidates fetch error: $e');
       }
 
-      // 4. Fetch Videos & Status Counts from PostgreSQL & Web LocalStorage
-      try {
-        _qcSubmissions.clear();
-        final Set<String> processedIds = {};
-        int adminApproved = 0;
-        int adminRejected = 0;
-        int pendingReview = 0;
+      // 4. Process Videos Response
+      final Set<String> processedIds = {};
+      int adminApproved = 0;
+      int adminRejected = 0;
+      int pendingReview = 0;
 
-        final videosUri = Uri.parse('$_apiBaseUrl/videos');
+      if (videosRes.statusCode == 200) {
         try {
-          final videosRes = await http.get(videosUri, headers: headers).timeout(const Duration(seconds: 4));
-          if (videosRes.statusCode == 200) {
-            final data = jsonDecode(videosRes.body);
-            final rawData = data['data'];
-            final List<dynamic> items = rawData is List ? rawData : (rawData?['items'] ?? []);
+          final data = jsonDecode(videosRes.body);
+          final rawData = data['data'];
+          final List<dynamic> items = rawData is List ? rawData : (rawData?['items'] ?? []);
 
-            for (var vid in items) {
-              final id = vid['id']?.toString() ?? '';
+          for (var vid in items) {
+            final id = vid['id']?.toString() ?? '';
+            if (id.isNotEmpty) processedIds.add(id);
+
+            final st = (vid['status'] ?? 'pending').toString().toLowerCase();
+            if (st == 'admin_approved') {
+              adminApproved++;
+            } else if (st == 'admin_rejected' || st.contains('admin_reject')) {
+              adminRejected++;
+            } else {
+              pendingReview++;
+              final isAssigned = st.contains('assigned') || (vid['assigned_to'] != null && vid['assigned_to'].toString().isNotEmpty && vid['assigned_to'] != 'Unassigned');
+              if (!isAssigned) {
+                tempQCSubmissions.add({
+                  'id': id.isNotEmpty ? (id.length > 8 ? id.substring(0, 8) : id) : 'VID-001',
+                  'raw_id': id,
+                  'title': vid['title'] ?? 'Video Recording',
+                  'candidateName': vid['candidate_name'] ?? vid['candidateName'] ?? 'Candidate',
+                  'vendor': vid['vendor_name'] ?? vid['vendor'] ?? 'Acme Video Solutions',
+                  'duration': '${vid['duration'] ?? 15} Mins',
+                  'time': 'Just Now',
+                  'env': vid['environment_tag'] ?? 'Indoor',
+                  'score': 95,
+                  'status': 'Pending QC',
+                  'assignedTo': vid['assigned_to'] ?? 'Unassigned',
+                });
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Videos parse error: $e');
+        }
+      }
+
+      // 5. Process Web LocalStorage for Offline/Demo items
+      if (kIsWeb) {
+        try {
+          final raw = web.localStorageGet('platform_qc_submissions');
+          if (raw != null) {
+            final List<dynamic> list = jsonDecode(raw);
+            for (var item in list) {
+              final id = item['id']?.toString() ?? '';
+              if (id.isNotEmpty && processedIds.contains(id)) continue;
+
+              final title = (item['title'] ?? '').toString().toLowerCase();
+              final cName = (item['candidateName'] ?? item['candidate_name'] ?? '').toString().toLowerCase();
+              final vName = (item['vendor'] ?? item['vendor_name'] ?? '').toString().toLowerCase();
+
+              if (title.contains('test') || cName.contains('test candidate') || vName.contains('test vendor')) {
+                continue;
+              }
+
               if (id.isNotEmpty) processedIds.add(id);
 
-              final st = (vid['status'] ?? 'pending').toString().toLowerCase();
+              final st = (item['status'] ?? 'Pending').toString().toLowerCase();
               if (st == 'admin_approved') {
                 adminApproved++;
               } else if (st == 'admin_rejected' || st.contains('admin_reject')) {
                 adminRejected++;
               } else {
                 pendingReview++;
-                final isAssigned = st.contains('assigned') || (vid['assigned_to'] != null && vid['assigned_to'].toString().isNotEmpty && vid['assigned_to'] != 'Unassigned');
-                if (!isAssigned) {
-                  _qcSubmissions.add({
-                    'id': id.isNotEmpty ? (id.length > 8 ? id.substring(0, 8) : id) : 'VID-001',
+                final isAssigned = st.contains('assigned') || (item['assignedTo'] != null && item['assignedTo'].toString().isNotEmpty && item['assignedTo'] != 'Unassigned');
+                if (!isAssigned && st != 'qc_approved') {
+                  tempQCSubmissions.add({
+                    'id': id.isNotEmpty ? (id.length > 8 ? id.substring(0, 8) : id) : 'VID-${tempQCSubmissions.length + 1}',
                     'raw_id': id,
-                    'title': vid['title'] ?? 'Video Recording',
-                    'candidateName': vid['candidate_name'] ?? vid['candidateName'] ?? 'Candidate',
-                    'vendor': vid['vendor_name'] ?? vid['vendor'] ?? 'Acme Video Solutions',
-                    'duration': '${vid['duration'] ?? 15} Mins',
-                    'time': 'Just Now',
-                    'env': vid['environment_tag'] ?? 'Indoor',
-                    'score': 95,
+                    'title': item['title'] ?? 'Uploaded Video Recording',
+                    'candidateName': item['candidateName'] ?? 'Candidate',
+                    'vendor': item['vendor'] ?? 'Acme Video Solutions',
+                    'duration': item['duration'] ?? '30:00 Mins',
+                    'time': item['time'] ?? 'Just Now',
+                    'env': item['env'] ?? 'Kitchen',
+                    'score': item['score'] ?? 95,
                     'status': 'Pending QC',
-                    'assignedTo': vid['assigned_to'] ?? 'Unassigned',
+                    'assignedTo': item['assignedTo'] ?? 'Unassigned',
                   });
                 }
               }
             }
           }
         } catch (_) {}
-
-        // Also fetch Web LocalStorage platform_qc_submissions so candidate uploaded videos show up live for Admin
-        if (kIsWeb) {
-          try {
-            final raw = web.localStorageGet('platform_qc_submissions');
-            if (raw != null) {
-              final List<dynamic> list = jsonDecode(raw);
-              for (var item in list) {
-                final id = item['id']?.toString() ?? '';
-                if (id.isNotEmpty && processedIds.contains(id)) continue;
-
-                final title = (item['title'] ?? '').toString().toLowerCase();
-                final cName = (item['candidateName'] ?? item['candidate_name'] ?? '').toString().toLowerCase();
-                final vName = (item['vendor'] ?? item['vendor_name'] ?? '').toString().toLowerCase();
-
-                // Skip synthetic/mock test items
-                if (title.contains('test') || cName.contains('test candidate') || vName.contains('test vendor')) {
-                  continue;
-                }
-
-                if (id.isNotEmpty) processedIds.add(id);
-
-                final st = (item['status'] ?? 'Pending').toString().toLowerCase();
-                if (st == 'admin_approved') {
-                  adminApproved++;
-                } else if (st == 'admin_rejected' || st.contains('admin_reject')) {
-                  adminRejected++;
-                } else {
-                  pendingReview++;
-                  final isAssigned = st.contains('assigned') || (item['assignedTo'] != null && item['assignedTo'].toString().isNotEmpty && item['assignedTo'] != 'Unassigned');
-                  if (!isAssigned && st != 'qc_approved') {
-                    _qcSubmissions.add({
-                      'id': id.isNotEmpty ? (id.length > 8 ? id.substring(0, 8) : id) : 'VID-${_qcSubmissions.length + 1}',
-                      'raw_id': id,
-                      'title': item['title'] ?? 'Uploaded Video Recording',
-                      'candidateName': item['candidateName'] ?? 'Candidate',
-                      'vendor': item['vendor'] ?? 'Acme Video Solutions',
-                      'duration': item['duration'] ?? '30:00 Mins',
-                      'time': item['time'] ?? 'Just Now',
-                      'env': item['env'] ?? 'Kitchen',
-                      'score': item['score'] ?? 95,
-                      'status': 'Pending QC',
-                      'assignedTo': item['assignedTo'] ?? 'Unassigned',
-                    });
-                  }
-                }
-              }
-            }
-          } catch (_) {}
-        }
-
-        _pendingQCCount = pendingReview;
-        _approvedCount = adminApproved;
-        _rejectedCount = adminRejected;
-        _totalVideosCount = adminApproved + adminRejected + pendingReview;
-      } catch (e) {
-        debugPrint('Videos fetch error: $e');
       }
 
-      // 5. Fetch Recent Activities / Notifications from PostgreSQL
-      try {
-        final notifUri = Uri.parse('$_apiBaseUrl/notifications?role=admin');
-        final notifRes = await http.get(notifUri, headers: headers).timeout(const Duration(seconds: 4));
-        if (notifRes.statusCode == 200) {
+      // 6. Process Notifications Response
+      if (notifRes.statusCode == 200) {
+        try {
           final data = jsonDecode(notifRes.body);
           final List<dynamic> notifs = data['data'] is List ? data['data'] : (data['data']?['items'] ?? []);
-          _activities.clear();
           for (var n in notifs) {
             final title = n['title'] ?? 'Activity Update';
             IconData icon = Icons.notifications_rounded;
@@ -963,7 +970,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               bgColor = const Color(0xFFFFFBEB);
             }
 
-            _activities.add({
+            tempActivities.add({
               'title': title,
               'desc': n['message'] ?? '',
               'time': 'Just Now',
@@ -972,13 +979,41 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               'bgColor': bgColor,
             });
           }
+        } catch (e) {
+          debugPrint('Notifications parse error: $e');
         }
-      } catch (e) {
-        debugPrint('Notifications fetch error: $e');
+      }
+
+      // Single atomic setState update to prevent UI flickering/freezing
+      if (mounted) {
+        setState(() {
+          _totalVendorsCount = tempVendorsCount;
+          _totalCandidatesCount = tempCandidatesCount;
+          _totalVideosCount = tempVideosCount > 0 ? tempVideosCount : (tempApprovedCount + tempRejectedCount + tempPendingQCCount);
+          _pendingQCCount = tempPendingQCCount > 0 ? tempPendingQCCount : pendingReview;
+          _approvedCount = tempApprovedCount > 0 ? tempApprovedCount : adminApproved;
+          _rejectedCount = tempRejectedCount > 0 ? tempRejectedCount : adminRejected;
+
+          _dailyTrends.clear();
+          _dailyTrends.addAll(tempDailyTrends);
+
+          _vendors.clear();
+          _vendors.addAll(tempVendors);
+
+          _candidates.clear();
+          _candidates.addAll(tempCandidates);
+
+          _qcSubmissions.clear();
+          _qcSubmissions.addAll(tempQCSubmissions);
+
+          _activities.clear();
+          _activities.addAll(tempActivities);
+        });
       }
     } catch (e) {
       debugPrint('Real backend fetch exception: $e');
     } finally {
+      _isFetchingData = false;
       if (mounted) {
         setState(() => _isLoading = false);
       }
