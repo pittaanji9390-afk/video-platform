@@ -17,7 +17,12 @@ class ApiConstants {
       return 'http://$host:5000';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000';
+      // Use production API in release builds, emulator localhost in debug
+      const bool isRelease = bool.fromEnvironment('dart.vm.product');
+      if (isRelease) {
+        return 'https://elevateiq-softtech.com/video-platform-api';
+      }
+      return 'http://10.0.2.2:5000'; // Android emulator → host localhost
     }
     return 'http://localhost:5000';
   }
