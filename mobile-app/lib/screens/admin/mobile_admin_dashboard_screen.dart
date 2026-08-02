@@ -387,18 +387,18 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
-  // Quick Executive Metrics Header
+  // Quick Executive Metrics Header with overflow-safe FittedBox and Expanded
   Widget _buildQuickMetricsHeader() {
     return Container(
       color: const Color(0xFF1E3A8A),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: Row(
         children: [
-          _buildMetricCard('Vendors', '${_vendors.length}', Icons.storefront, const Color(0xFF3B82F6)),
-          const SizedBox(width: 8),
-          _buildMetricCard('Candidates', '${_candidates.length}', Icons.people, const Color(0xFF10B981)),
-          const SizedBox(width: 8),
-          _buildMetricCard('QC Queue', '${_qcSubmissions.length}', Icons.video_collection, const Color(0xFFF59E0B)),
+          _buildMetricCard('Vendors', '${_vendors.length}', Icons.storefront, const Color(0xFF60A5FA)),
+          const SizedBox(width: 6),
+          _buildMetricCard('Candidates', '${_candidates.length}', Icons.people, const Color(0xFF34D399)),
+          const SizedBox(width: 6),
+          _buildMetricCard('QC Queue', '${_qcSubmissions.length}', Icons.video_collection, const Color(0xFFFBBF24)),
         ],
       ),
     );
@@ -407,23 +407,35 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   Widget _buildMetricCard(String label, String value, IconData icon, Color accentColor) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.15)),
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withOpacity(0.18)),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: accentColor, size: 20),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
-              ],
+            Icon(icon, color: accentColor, size: 18),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
+                  Text(
+                    label,
+                    style: const TextStyle(color: Colors.white70, fontSize: 10),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -455,12 +467,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Vendor Directory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      Text('${_vendors.length} Total Partners Registered', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Vendor Directory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                        Text('${_vendors.length} Total Partners Registered', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      ],
+                    ),
                   ),
                   ElevatedButton.icon(
                     onPressed: _showAddVendorDialog,
@@ -468,7 +482,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                     label: const Text('Add Vendor', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2563EB),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
@@ -664,12 +678,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('QC Review Queue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      Text('${_qcSubmissions.length} Submissions Awaiting Sign-off', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('QC Review Queue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                        Text('${_qcSubmissions.length} Submissions Awaiting Sign-off', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      ],
+                    ),
                   ),
                   ElevatedButton.icon(
                     onPressed: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
