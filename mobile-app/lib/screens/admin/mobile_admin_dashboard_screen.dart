@@ -2465,7 +2465,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
 }
 
-// Dynamic Trend Chart Painter - Uses real backend daily_trends data
+// Dynamic Trend Chart Painter - Uses real backend daily_trends data safely
 class _DynamicTrendPainter extends CustomPainter {
   final List<Map<String, dynamic>> trends;
 
@@ -2475,23 +2475,25 @@ class _DynamicTrendPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (trends.isEmpty) return;
 
-    // Extract uploaded counts as the primary trend line
-    final values = trends.map((t) => (t['uploaded'] as int? ?? 0).toDouble()).toList();
-    final approved = trends.map((t) => (t['approved'] as int? ?? 0).toDouble()).toList();
-    final days = trends.map((t) => (t['day'] as String? ?? '').toString()).toList();
+    // Extract uploaded counts safely without type casting crashes
+    final values = trends.map((t) => (num.tryParse(t['uploaded']?.toString() ?? '0') ?? 0).toDouble()).toList();
+    final approved = trends.map((t) => (num.tryParse(t['approved']?.toString() ?? '0') ?? 0).toDouble()).toList();
+    final days = trends.map((t) => (t['day']?.toString() ?? '')).toList();
 
-    final maxVal = values.fold<double>(1, (a, b) => b > a ? b : a);
+    final maxVal = values.fold<double>(1.0, (a, b) => b > a ? b : a);
     final n = values.length;
     if (n < 1) return;
 
     final chartTop = 8.0;
-    final chartBottom = size.height - 20.0;
-    final chartHeight = chartBottom - chartTop;
+    final chartBottom = (size.height - 20.0).clamp(0.0, size.height);
+    final chartHeight = (chartBottom - chartTop).clamp(1.0, size.height);
 
     Offset _pt(int i, List<double> vals) {
-      final x = n == 1 ? size.width / 2 : (i / (n - 1)) * size.width;
-      final y = chartTop + chartHeight * (1 - (vals[i] / maxVal).clamp(0.0, 1.0));
-      return Offset(x, y);
+      final safeVal = (i >= 0 && i < vals.length) ? vals[i] : 0.0;
+      final x = n <= 1 ? size.width / 2 : (i / (n - 1)) * size.width;
+      final ratio = (safeVal / maxVal).clamp(0.0, 1.0);
+      final y = chartTop + chartHeight * (1.0 - ratio);
+      return Offset(x.isNaN ? 0.0 : x, y.isNaN ? 0.0 : y);
     }
 
     // Draw filled area under uploaded line (blue gradient)
