@@ -389,7 +389,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             ),
             const SizedBox(height: 20),
 
-            // Uploads Overview Card
+            // Uploads Overview Card (Clean Standard Widgets)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(18),
@@ -405,16 +405,27 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Uploads Overview', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      Text('Success: $approvedPct%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                      Text('Approval Rate: $approvedPct%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 120,
-                    width: double.infinity,
-                    child: CustomPaint(
-                      painter: _TrendChartPainter(_dailyTrends),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: calcTotal > 0 ? (_approvedCount / calcTotal).clamp(0.0, 1.0) : 0.0,
+                      minHeight: 10,
+                      backgroundColor: const Color(0xFFEFF6FF),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildOverviewStatBadge('Approved', '$_approvedCount', const Color(0xFF16A34A)),
+                      _buildOverviewStatBadge('Pending QC', '$_pendingQCCount', const Color(0xFFD97706)),
+                      _buildOverviewStatBadge('Rejected', '$_rejectedCount', const Color(0xFFDC2626)),
+                    ],
                   ),
                 ],
               ),
@@ -792,46 +803,20 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       ),
     );
   }
-}
-
-// 7-Day Trend Chart Painter
-class _TrendChartPainter extends CustomPainter {
-  final List<Map<String, dynamic>> trends;
-  _TrendChartPainter(this.trends);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (trends.isEmpty) {
-      final textPainter = TextPainter(
-        text: const TextSpan(text: '7-Day Trend Data Ready', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      textPainter.paint(canvas, Offset((size.width - textPainter.width) / 2, (size.height - textPainter.height) / 2));
-      return;
-    }
-
-    final values = trends.map((t) => (t['uploaded'] as int? ?? 0).toDouble()).toList();
-    final n = values.length;
-    final maxVal = values.fold<double>(1.0, (a, b) => b > a ? b : a);
-
-    final linePaint = Paint()
-      ..color = const Color(0xFF2563EB)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-    for (int i = 0; i < n; i++) {
-      final x = n <= 1 ? size.width / 2 : (i / (n - 1)) * size.width;
-      final y = size.height - 20.0 - ((values[i] / maxVal) * (size.height - 30.0));
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(path, linePaint);
+  Widget _buildOverviewStatBadge(String label, String val, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 2),
+          Text(val, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color)),
+        ],
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant _TrendChartPainter old) => old.trends != trends;
 }
