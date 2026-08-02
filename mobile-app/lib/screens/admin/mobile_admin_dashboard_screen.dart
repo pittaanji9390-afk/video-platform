@@ -809,8 +809,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           final List<dynamic> items = rawData is List ? rawData : (rawData?['items'] ?? []);
           _candidates.clear();
           for (var c in items) {
+            final rawId = c['id']?.toString() ?? '';
+            final displayId = rawId.isNotEmpty ? (rawId.length >= 8 ? rawId.substring(0, 8) : rawId) : 'CND-001';
             _candidates.add({
-              'id': c['id'] != null ? c['id'].toString().substring(0, 8) : 'CND-001',
+              'id': displayId,
               'name': c['full_name'] ?? 'Candidate Name',
               'email': c['email'] ?? 'candidate@example.com',
               'phone': c['phone'] ?? 'N/A',
@@ -1156,7 +1158,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: IndexedStack(
-        index: _activeNavIndex,
+        index: _activeNavIndex.clamp(0, 3),
         children: [
           _buildDashboardScreen(),
           _buildVendorManagementScreen(),
@@ -1174,7 +1176,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           children: [
             const PoweredByFooter(),
             BottomNavigationBar(
-              currentIndex: _activeNavIndex,
+              currentIndex: _activeNavIndex.clamp(0, 3),
               onTap: (idx) => setState(() => _activeNavIndex = idx),
               backgroundColor: Colors.white,
               selectedItemColor: const Color(0xFF2563EB),
@@ -1503,8 +1505,12 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                       children: [
                         for (int i = 0; i < _activities.length; i++) ...[
                           _buildActivityTile(
-                            icon: _activities[i]['icon'] as IconData,
-                            iconBg: (_activities[i]['accentColor'] as Color),
+                            icon: _activities[i]['icon'] is IconData
+                                ? (_activities[i]['icon'] as IconData)
+                                : Icons.notifications_rounded,
+                            iconBg: _activities[i]['accentColor'] is Color
+                                ? (_activities[i]['accentColor'] as Color)
+                                : const Color(0xFF2563EB),
                             title: _activities[i]['title']?.toString() ?? '',
                             subtitle: _activities[i]['desc']?.toString() ?? '',
                             time: _activities[i]['time']?.toString() ?? '',
@@ -1562,7 +1568,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                     icon: Icons.description_rounded,
                     label: 'Reports &\nExport',
                     color: const Color(0xFF0284C7),
-                    onTap: () => setState(() => _activeNavIndex = 4),
+                    onTap: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
                   ),
                 ],
               ),
