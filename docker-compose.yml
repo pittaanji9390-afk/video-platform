@@ -40,9 +40,12 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-super_secret_jwt_refresh_token_key_2026_video_platform}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
-      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://elevateiq-softtech.com,http://elevateiq-softtech.com}
+      ALLOW_HTTP: ${ALLOW_HTTP:-false}
     ports:
-      - "5000:5000"
+      # Host port 5002 → Container internal port 5000
+      # Nginx proxies /video-platform-api/ → http://127.0.0.1:5002/
+      - "5002:5000"
     depends_on:
       postgres:
         condition: service_healthy
