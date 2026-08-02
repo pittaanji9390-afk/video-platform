@@ -164,6 +164,29 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         ]);
       }
 
+      if (tempQC.isEmpty) {
+        tempQC.addAll([
+          {
+            'id': 'VID-001',
+            'raw_id': 'demo_vid_001',
+            'title': 'Candidate Intro Recording',
+            'candidateName': 'Alex Johnson',
+            'vendor': 'Acme Video Solutions',
+            'duration': '12 Mins',
+            'status': 'Pending QC',
+          },
+          {
+            'id': 'VID-002',
+            'raw_id': 'demo_vid_002',
+            'title': 'Technical Assessment Video',
+            'candidateName': 'Emily Davis',
+            'vendor': 'Global Media Partners',
+            'duration': '18 Mins',
+            'status': 'Pending QC',
+          },
+        ]);
+      }
+
       if (mounted) {
         setState(() {
           _vendors.clear();

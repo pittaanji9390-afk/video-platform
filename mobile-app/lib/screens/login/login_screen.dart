@@ -52,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
-      if (role == 'admin') {
+      if (role == 'admin' || role.contains('admin')) {
         Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
       } else if (role == 'qc_team' || role == 'qc' || role == 'qc_reviewer' || role.contains('qc')) {
         Navigator.pushReplacementNamed(context, AppRoutes.qcDashboard);
