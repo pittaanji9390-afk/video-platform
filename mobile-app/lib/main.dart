@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'config/routes/app_routes.dart';
-import 'core/theme/app_theme.dart';
-import 'services/auth_service.dart';
-import 'services/permission_service.dart';
-import 'services/location_service.dart';
-import 'services/device_service.dart';
-import 'services/auto_upload_service.dart';
+import 'package:mobile_app/config/routes/app_routes.dart';
+import 'package:mobile_app/core/theme/app_theme.dart';
+import 'package:mobile_app/services/auth_service.dart';
+import 'package:mobile_app/services/permission_service.dart';
+import 'package:mobile_app/services/location_service.dart';
+import 'package:mobile_app/services/device_service.dart';
+import 'package:mobile_app/services/auto_upload_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,11 +20,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthService()),
-        Provider(create: (_) => PermissionService()),
-        Provider(create: (_) => LocationService()),
-        Provider(create: (_) => DeviceService()),
-        Provider(create: (_) => AutoUploadService()),
+        ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+        Provider<PermissionService>(create: (_) => PermissionService()),
+        Provider<LocationService>(create: (_) => LocationService()),
+        Provider<DeviceService>(create: (_) => DeviceService()),
+        Provider<AutoUploadService>(create: (_) => AutoUploadService()),
       ],
       child: MaterialApp(
         title: 'Video Platform',
