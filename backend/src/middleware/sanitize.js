@@ -4,6 +4,7 @@
  */
 
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 /**
  * Recursively sanitize all string values in an object

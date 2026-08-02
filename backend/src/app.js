@@ -12,6 +12,7 @@ const { sanitizeInput, detectSQLInjection, requestId } = require('./middleware/s
 const { enforceHttps } = require('./middleware/enforceHttps');
 
 const app = express();
+app.set('trust proxy', true);
 
 // ============================================================================
 // SECURITY LAYER 1: Request ID & HTTPS Enforcement
@@ -25,42 +26,16 @@ app.use(enforceHttps);
 app.disable('x-powered-by');
 app.set('etag', 'strong');
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "same-origin" },
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      mediaSrc: ["'self'", "blob:", "data:"],
-      connectSrc: ["'self'"],
-    },
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false,
 }));
 
 // ============================================================================
 // SECURITY LAYER 3: CORS Configuration
 // ============================================================================
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-  : ['http://localhost:8081', 'http://localhost:5000', 'http://127.0.0.1:8081', 'http://127.0.0.1:5000'];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  origin: true, // Allow all origins for API endpoints to prevent mobile/web CORS blocking
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-API-Key'],
   exposedHeaders: ['X-Request-Id', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   credentials: true,
