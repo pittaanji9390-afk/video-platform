@@ -22,7 +22,7 @@
    - Min SDK: `21`, Target/Compile SDK: `34`
 2. **Backend API (`/backend`)**:
    - Runtime: **Node.js 18 (Express)**
-   - Database: **PostgreSQL (Dockerized)**
+   - Database: **Neon Cloud PostgreSQL (Serverless PostgreSQL)**
    - Reverse Proxy: **Nginx 1.24**
 3. **Infrastructure**:
    - Server: **Hostinger VPS** (`195.35.21.139` / `elevateiq-softtech.com`)
