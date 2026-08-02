@@ -221,11 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
-                      return 'Please enter email address';
-                    }
-                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                    if (!emailRegex.hasMatch(val.trim())) {
-                      return 'Please enter a valid email address';
+                      return 'Please enter email address or username';
                     }
                     return null;
                   },
@@ -282,8 +278,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 4),
-
                 const SizedBox(height: 16),
 
                 // Login Button
@@ -308,6 +302,55 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Login',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
+                ),
+                const SizedBox(height: 16),
+
+                // Quick 1-Tap Login Buttons for Instant Client Evaluation
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Quick Demo Portals',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoading ? null : () => _handleLogin('admin@demo.com', 'admin'),
+                              icon: const Icon(Icons.shield_outlined, size: 16, color: Colors.white),
+                              label: const Text('Admin Dashboard', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1E3A8A),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoading ? null : () => _handleLogin('vendor@demo.com', 'vendor'),
+                              icon: const Icon(Icons.storefront_outlined, size: 16, color: Colors.white),
+                              label: const Text('Vendor Portal', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
