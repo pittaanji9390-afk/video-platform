@@ -74,7 +74,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
   Future<http.Response> _safeGet(String url, Map<String, String> headers) async {
     try {
-      return await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 5));
+      return await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 12));
     } catch (e) {
       debugPrint('GET failed for $url: $e');
       return http.Response('{}', 500);
@@ -243,9 +243,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
       if (mounted) {
         setState(() {
-          _totalVendorsCount = tempVendorsCount;
-          _totalCandidatesCount = tempCandidatesCount;
-          _totalVideosCount = tempVideosCount > 0 ? tempVideosCount : (tempApproved + tempRejected + tempPendingQC);
+          _totalVendorsCount = tempVendorsCount > 0 ? tempVendorsCount : tempVendors.length;
+          _totalCandidatesCount = tempCandidatesCount > 0 ? tempCandidatesCount : tempCandidates.length;
+          _totalVideosCount = tempVideosCount > 0 ? tempVideosCount : (tempApproved + tempRejected + tempPendingQC > 0 ? (tempApproved + tempRejected + tempPendingQC) : (tempQC.length > 0 ? tempQC.length : 1));
           _pendingQCCount = tempPendingQC > 0 ? tempPendingQC : tempQC.length;
           _approvedCount = tempApproved;
           _rejectedCount = tempRejected;
