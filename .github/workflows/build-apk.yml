@@ -52,20 +52,26 @@ jobs:
       #    Secrets are set in GitHub → Settings → Secrets → Actions
       #    If secrets are not set, falls back to debug signing automatically
       - name: 🔑 Configure release signing (if secrets exist)
-        if: |
-          github.event.inputs.build_type == 'release' &&
-          secrets.KEYSTORE_BASE64 != '' &&
-          secrets.KEY_ALIAS != ''
+        if: github.event.inputs.build_type == 'release'
         working-directory: mobile-app/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "⚠️  No signing secrets found — release will use debug keystore"
+            exit 0
+          fi
           # Decode base64 keystore → app/upload-keystore.jks
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/upload-keystore.jks
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/upload-keystore.jks
 
           # Write key.properties file
           cat > key.properties << EOF
-          storePassword=${{ secrets.STORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
           storeFile=upload-keystore.jks
           EOF
 
