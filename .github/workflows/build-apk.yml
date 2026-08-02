@@ -92,7 +92,7 @@ jobs:
         if: github.event_name == 'push'
         working-directory: mobile-app
         run: |
-          flutter build apk --debug \
+          flutter build apk --debug --verbose \
             --build-name="1.0.${{ github.run_number }}" \
             --build-number=${{ github.run_number }}
           echo "APK_PATH=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_ENV
