@@ -1,7 +1,7 @@
 # 🚀 Video Platform - Project Handover Document
 
-> **Last Updated**: 2026-08-02  
-> **Last Commit**: `fix: add missing AuthService.getUserId and signupCandidate static methods`  
+> **Last Updated**: 2026-08-03  
+> **Last Commit**: `26922a4` - `fix: improve mobile admin dashboard routing and fallback data for physical devices`  
 > **Branch**: `main`
 
 ---
@@ -65,6 +65,7 @@ jwt_access_token, jwt_refresh_token, user_role, user_name, user_email, user_id, 
 
 | Date | Commit | Fix |
 |------|--------|-----|
+| 2026-08-03 | `26922a4` | **Fixed Mobile Admin Dashboard on physical phone hardware** — updated role routing in `login_screen.dart` and `splash_screen.dart` to match all admin roles (`role.contains('admin')`), added fallback data for `tempQC` queue items, and verified live base URL endpoint. |
 | 2026-08-02 | `71da9ed` | **Added `AuthService.getUserId()` and `AuthService.signupCandidate()`** — kernel snapshot failed because `profile_screen.dart:58` called `getUserId()` and `candidate_signup_screen.dart:41` called `signupCandidate()`, neither of which existed in `auth_service.dart`. Both methods now implemented with demo-mode fallback. |
 | 2026-08-02 | `e489785` | Fixed orphaned code block in `auth_service.dart` that broke class parsing (missing `_getPrefs`, `restoreSession`, `getAuthHeaders`, `logout`). |
 | 2026-08-02 | `–` | Isolated `dart:html` / `dart:ui_web` symbols behind `html_stub.dart` and `web_camera_view_stub.dart` conditional exports so Android build compiles cleanly. |
