@@ -12,6 +12,7 @@ class AuthService extends ChangeNotifier {
   static const String keyUserEmail    = 'user_email';
   static const String keyUserId       = 'user_id';
   static const String keyVendorId     = 'vendor_id';
+  static const String keyIsDemoMode   = 'is_demo_mode';
 
   static SharedPreferences? _cachedPrefs;
 
@@ -42,47 +43,68 @@ class AuthService extends ChangeNotifier {
           'email': cleanIdentifier,
           'password': password,
         }),
-      ).timeout(const Duration(seconds: 4));
+      ).timeout(const Duration(seconds: 6));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final token = data['token'] ?? data['accessToken'] ?? 'demo_token';
+        final token = data['token'] ?? data['accessToken'] ?? '';
         final user = data['user'] ?? {};
-        final role = user['role'] ?? _determineRole(cleanIdentifier);
+        final role = (user['role'] ?? _determineRole(cleanIdentifier)).toString().toLowerCase();
         
         await saveSession(
           token: token,
           refreshToken: data['refreshToken'] ?? '',
           role: role,
-          name: user['name'] ?? 'User',
+          name: user['name'] ?? user['full_name'] ?? 'User',
           email: cleanIdentifier,
-          userId: user['id'] ?? 'user_123',
-          vendorId: user['vendorId'] ?? 'vendor_123',
+          userId: user['id']?.toString() ?? '',
+          vendorId: user['vendorId']?.toString() ?? user['vendor_id']?.toString() ?? '',
+          isDemoMode: false,
         );
 
         return {'success': true, 'role': role, 'data': data};
+      }
+
+      // Server reachable but credentials wrong — do NOT fall through to demo mode
+      try {
+        final err = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': err['message'] ?? err['error'] ?? 'Invalid credentials (${response.statusCode})',
+        };
+      } catch (_) {
+        return {
+          'success': false,
+          'message': 'Login failed (${response.statusCode}). Please check credentials.',
+        };
       }
     } catch (e) {
       debugPrint('Live API login exception: $e');
     }
 
-    // Demo Mode Fallback for instant client evaluation
+    // Server unreachable — Demo Mode Fallback for offline/client evaluation
     final demoRole = _determineRole(cleanIdentifier);
+    String demoName = 'Candidate User';
+    if (cleanIdentifier.contains('admin')) demoName = 'Admin User';
+    else if (cleanIdentifier.contains('vendor')) demoName = 'Vendor User';
+    else if (cleanIdentifier.contains('qc')) demoName = 'QC Evaluator';
+
     await saveSession(
       token: 'demo_token_${DateTime.now().millisecondsSinceEpoch}',
       refreshToken: 'demo_refresh_token',
       role: demoRole,
-      name: cleanIdentifier.contains('admin') ? 'Admin User' : (cleanIdentifier.contains('vendor') ? 'Vendor User' : 'QC Evaluator'),
+      name: demoName,
       email: cleanIdentifier,
-      userId: 'demo_user_id',
+      userId: 'demo_user_${cleanIdentifier.hashCode.abs()}',
       vendorId: 'demo_vendor_id',
+      isDemoMode: true,
     );
 
     return {
       'success': true,
       'role': demoRole,
       'isDemo': true,
-      'message': 'Logged in successfully'
+      'message': 'Server unreachable — running in Demo Mode',
     };
   }
 
@@ -101,6 +123,7 @@ class AuthService extends ChangeNotifier {
     required String email,
     required String userId,
     required String vendorId,
+    bool isDemoMode = false,
   }) async {
     final prefs = await _getPrefs();
     await prefs.setString(keyAccessToken, token);
@@ -110,6 +133,13 @@ class AuthService extends ChangeNotifier {
     await prefs.setString(keyUserEmail, email);
     await prefs.setString(keyUserId, userId);
     await prefs.setString(keyVendorId, vendorId);
+    await prefs.setBool(keyIsDemoMode, isDemoMode);
+  }
+
+  /// Returns true if the app is running with a demo/offline token.
+  static Future<bool> isDemo() async {
+    final prefs = await _getPrefs();
+    return prefs.getBool(keyIsDemoMode) ?? false;
   }
 
   static Future<Map<String, String>?> restoreSession() async {
@@ -117,12 +147,14 @@ class AuthService extends ChangeNotifier {
     final token = prefs.getString(keyAccessToken);
     final role = prefs.getString(keyUserRole);
     if (token != null && token.isNotEmpty) {
+      final userId = prefs.getString(keyUserId) ?? '';
       return {
         'token': token,
         'role': role ?? 'candidate',
         'name': prefs.getString(keyUserName) ?? '',
         'email': prefs.getString(keyUserEmail) ?? '',
-        'userId': prefs.getString(keyUserId) ?? '',
+        'userId': userId,
+        'id': userId,           // alias so both session['id'] and session['userId'] work
         'vendorId': prefs.getString(keyVendorId) ?? '',
       };
     }
@@ -147,6 +179,7 @@ class AuthService extends ChangeNotifier {
     await prefs.remove(keyUserEmail);
     await prefs.remove(keyUserId);
     await prefs.remove(keyVendorId);
+    await prefs.remove(keyIsDemoMode);
   }
 
   /// Returns the stored user ID (empty string if not set).
@@ -167,7 +200,7 @@ class AuthService extends ChangeNotifier {
     final cleanEmail = email.trim().toLowerCase();
 
     try {
-      final url = Uri.parse('$baseUrl/auth/register');
+      final url = Uri.parse('$baseUrl/auth/signup');
       final body = <String, dynamic>{
         'email': cleanEmail,
         'password': password,
@@ -235,6 +268,7 @@ class AuthService extends ChangeNotifier {
       email: cleanEmail,
       userId: 'demo_candidate_${DateTime.now().millisecondsSinceEpoch}',
       vendorId: vendorCode.trim(),
+      isDemoMode: true,
     );
 
     return {
