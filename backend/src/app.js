@@ -13,19 +13,11 @@ const { enforceHttps } = require('./middleware/enforceHttps');
 
 const app = express();
 
-// Security Layer 1: Request ID & HTTPS Enforcement
+// ============================================================================
+// SECURITY LAYER 1: Request ID & HTTPS Enforcement
+// ============================================================================
 app.use(requestId);
 app.use(enforceHttps);
-
-// In-App Auto-Update Version Check Endpoint
-app.get('/api/v1/app/version', (req, res) => {
-  res.json({
-    latestVersion: '1.0.0',
-    apkUrl: 'https://github.com/rohith1246/video-platform/releases',
-    forceUpdate: false,
-    releaseNotes: 'Performance improvements and bug fixes.'
-  });
-});
 
 // ============================================================================
 // SECURITY LAYER 2: Security Headers (Helmet)
