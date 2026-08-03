@@ -1,9 +1,7 @@
 name: 🤖 Build Android APK
 
-# Triggers: every push to main branch, or manually via GitHub UI
+# Triggers: Manual trigger via GitHub UI / CLI or explicit release tag
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:           # Manual trigger — click "Run workflow" in GitHub Actions tab
     inputs:
       build_type:
