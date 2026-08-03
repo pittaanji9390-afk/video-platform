@@ -817,10 +817,13 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
   Widget _buildCandidatesTab() {
     return RefreshIndicator(
       onRefresh: _loadVendorData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: SafeArea(
+        top: true,
+        bottom: false,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Column(
@@ -971,6 +974,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -988,10 +992,13 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
     return RefreshIndicator(
       onRefresh: _loadVendorUploads,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: SafeArea(
+        top: true,
+        bottom: false,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -1092,6 +1099,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -1129,45 +1137,49 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
   // 4. NOTIFICATIONS TAB (Screen #6 in Image 2)
   Widget _buildNotificationsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Notifications', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              TextButton(
-                onPressed: _markNotificationsAsRead,
-                child: const Text('Mark all read', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
+    return SafeArea(
+      top: true,
+      bottom: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Notifications', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: _markNotificationsAsRead,
+                  child: const Text('Mark all read', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
 
-          Column(
-            children: _vendorNotifications.map((n) {
-              final c = (n['color'] is Color) ? n['color'] as Color : AppColors.success;
-              final isRead = n['read'] == true;
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                color: isRead ? Colors.white : const Color(0xFFF0F9FF),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: isRead ? const Color(0xFFE2E8F0) : AppColors.primary.withAlpha(76)),
-                ),
-                child: ListTile(
-                  onTap: () => _handleNotificationTap(n),
-                  leading: CircleAvatar(backgroundColor: c.withAlpha(25), child: Icon(Icons.notifications_rounded, color: c)),
-                  title: Text(n['title']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(n['desc']?.toString() ?? ''),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+            Column(
+              children: _vendorNotifications.map((n) {
+                final c = (n['color'] is Color) ? n['color'] as Color : AppColors.success;
+                final isRead = n['read'] == true;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  color: isRead ? Colors.white : const Color(0xFFF0F9FF),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: isRead ? const Color(0xFFE2E8F0) : AppColors.primary.withAlpha(76)),
+                  ),
+                  child: ListTile(
+                    onTap: () => _handleNotificationTap(n),
+                    leading: CircleAvatar(backgroundColor: c.withAlpha(25), child: Icon(Icons.notifications_rounded, color: c)),
+                    title: Text(n['title']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(n['desc']?.toString() ?? ''),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1177,9 +1189,12 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
     final initials = _vendorName.isNotEmpty ? _vendorName[0].toUpperCase() : 'V';
     final referralCode = 'VEN-${_vendorName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase().padRight(4, 'X').substring(0, 4)}-2026';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return SafeArea(
+      top: true,
+      bottom: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
         children: [
           const SizedBox(height: 10),
           CircleAvatar(
@@ -1240,6 +1255,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           ),
         ],
       ),
+    ),
     );
   }
 
