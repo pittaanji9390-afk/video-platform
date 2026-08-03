@@ -994,8 +994,16 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Upload Status', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            const Text(
+              'Upload Status',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Filter and track candidate dataset video uploads in real-time',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 14),
 
             // Filter Segment Chips
             SingleChildScrollView(
@@ -1006,10 +1014,22 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: ChoiceChip(
+                      showCheckmark: isSel,
+                      checkmarkColor: Colors.white,
                       label: Text(status),
                       selected: isSel,
-                      selectedColor: AppColors.success,
-                      labelStyle: TextStyle(color: isSel ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+                      selectedColor: const Color(0xFF10B981),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      side: BorderSide(
+                        color: isSel ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF1E293B),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                       onSelected: (val) => setState(() => _activeUploadFilter = status),
                     ),
                   );
