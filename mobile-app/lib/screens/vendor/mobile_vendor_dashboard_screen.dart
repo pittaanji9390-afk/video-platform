@@ -135,9 +135,12 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
       }
 
       final vendorId = session?['id'] ?? session?['vendor_id'] ?? '';
-      final candUrl = vendorId.isNotEmpty
-          ? '${ApiConstants.baseUrl}/api/v1/candidates?vendor_id=$vendorId'
-          : '${ApiConstants.baseUrl}/api/v1/candidates';
+      final vendorCode = _vendorCode.isNotEmpty ? _vendorCode : (session?['vendor_code'] ?? session?['code'] ?? '');
+      final candUrl = vendorCode.isNotEmpty
+          ? '${ApiConstants.baseUrl}/api/v1/candidates?vendor_code=$vendorCode'
+          : (vendorId.isNotEmpty
+              ? '${ApiConstants.baseUrl}/api/v1/candidates?vendor_id=$vendorId'
+              : '${ApiConstants.baseUrl}/api/v1/candidates');
 
       final candRes = await http.get(Uri.parse(candUrl), headers: headers).timeout(const Duration(seconds: 4));
       if (candRes.statusCode == 200) {
@@ -149,6 +152,21 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
             int act = 0;
             int inact = 0;
             for (var c in items) {
+              final cCode = c['vendor_code']?.toString() ?? c['vendorCode']?.toString() ?? '';
+              final cVId = c['vendor_id']?.toString() ?? c['vendorId']?.toString() ?? '';
+              final cVName = c['vendor_name']?.toString() ?? c['vendor']?.toString() ?? '';
+
+              // Strict filtering by Vendor Code
+              if (vendorCode.isNotEmpty || vendorId.isNotEmpty) {
+                final bool matchesCode = vendorCode.isNotEmpty && cCode.isNotEmpty && cCode.toLowerCase() == vendorCode.toLowerCase();
+                final bool matchesId = vendorId.isNotEmpty && cVId.isNotEmpty && cVId == vendorId;
+                final bool matchesName = _vendorName.isNotEmpty && cVName.isNotEmpty && cVName.toLowerCase().contains(_vendorName.toLowerCase());
+
+                if (!matchesCode && !matchesId && !matchesName) {
+                  if (cCode.isNotEmpty || cVId.isNotEmpty) continue;
+                }
+              }
+
               final isAct = (c['is_active'] ?? true);
               if (isAct) act++; else inact++;
               _vendorCandidates.add({
@@ -156,6 +174,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                 'name': c['full_name'] ?? 'Candidate Name',
                 'email': c['email'] ?? 'candidate@example.com',
                 'vendor': c['vendor_name'] ?? _vendorName,
+                'vendor_code': cCode.isNotEmpty ? cCode : (vendorCode.isNotEmpty ? vendorCode : 'VEN-001'),
                 'videos': c['videos_count'] ?? 0,
                 'status': isAct ? 'Active' : 'Inactive',
                 'phone': c['phone'] ?? 'N/A',
@@ -851,17 +870,19 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Overall Candidate Directory',
+                const Text(
+                  'Candidate Directory',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
-                  'Real-time PostgreSQL candidate roster across all vendors',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  _vendorCode.isNotEmpty
+                      ? 'Candidates enrolled under Vendor Code: $_vendorCode'
+                      : 'Candidates enrolled under your Vendor Code',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                 ),
               ],
             ),

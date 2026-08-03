@@ -34,10 +34,11 @@ class CandidateController {
    */
   async getCandidates(req, res, next) {
     try {
-      const { vendor_id, page, limit } = req.query;
+      const { vendor_id, vendor_code, page, limit } = req.query;
 
       const result = await candidateService.getCandidates({
         vendor_id,
+        vendor_code,
         page,
         limit,
       });

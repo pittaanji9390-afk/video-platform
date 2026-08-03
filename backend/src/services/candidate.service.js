@@ -56,19 +56,19 @@ class CandidateService {
     }
   }
 
-  async getCandidates({ vendor_id, page = 1, limit = 100 }) {
+  async getCandidates({ vendor_id, vendor_code, page = 1, limit = 100 }) {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
     const offset = (pageNum - 1) * limitNum;
 
     try {
-      let countQuery = 'SELECT COUNT(*) FROM candidates WHERE deleted_at IS NULL';
+      let countQuery = 'SELECT COUNT(*) FROM candidates c LEFT JOIN vendors v ON c.vendor_id = v.id WHERE c.deleted_at IS NULL';
       let selectQuery = `
         SELECT
           c.id,
           c.vendor_id,
-          COALESCE(v.vendor_code, 'VEN-001') AS vendor_code,
-          COALESCE(v.company_name, 'Acme Video Solutions') AS vendor_name,
+          v.vendor_code AS vendor_code,
+          v.company_name AS vendor_name,
           c.full_name,
           c.phone,
           c.email,
@@ -82,9 +82,14 @@ class CandidateService {
 
       const params = [];
       if (vendor_id) {
-        countQuery += ' AND c.vendor_id = $1';
-        selectQuery += ' AND c.vendor_id = $1';
         params.push(vendor_id);
+        countQuery += ` AND c.vendor_id = $${params.length}`;
+        selectQuery += ` AND c.vendor_id = $${params.length}`;
+      }
+      if (vendor_code) {
+        params.push(vendor_code);
+        countQuery += ` AND (LOWER(v.vendor_code) = LOWER($${params.length}) OR c.vendor_id = $${params.length})`;
+        selectQuery += ` AND (LOWER(v.vendor_code) = LOWER($${params.length}) OR c.vendor_id = $${params.length})`;
       }
 
       const countResult = await db.query(countQuery, params);
