@@ -333,6 +333,19 @@ class AdminService {
     return res.rows[0];
   }
 
+  async createQCMember({ full_name, email, phone, password }) {
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash(password || 'qc123456', 10);
+    const query = `
+      INSERT INTO users (full_name, email, phone, password_hash, role, is_active, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, 'qc', TRUE, NOW(), NOW())
+      ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, password_hash = EXCLUDED.password_hash, updated_at = NOW()
+      RETURNING id, full_name, email, phone, role, created_at
+    `;
+    const res = await db.query(query, [full_name, email, phone || null, hash]);
+    return res.rows[0];
+  }
+
   async deleteAdmin(id) {
     const query = `UPDATE admins SET deleted_at = NOW(), is_active = FALSE WHERE id = $1 AND deleted_at IS NULL RETURNING id`;
     const res = await db.query(query, [id]);

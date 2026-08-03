@@ -34,6 +34,9 @@ router.post('/videos/:videoId/approve', (req, res, next) => adminController.appr
 // POST /api/v1/admins/videos/:videoId/reject - Admin Reject Video
 router.post('/videos/:videoId/reject', (req, res, next) => adminController.rejectVideo(req, res, next));
 
+// POST /api/v1/admins/qc-members - Create QC Evaluator Member
+router.post('/qc-members', (req, res, next) => adminController.createQCMember(req, res, next));
+
 // POST /api/v1/admins - Create Admin
 router.post('/', validateCreateAdmin, (req, res, next) => adminController.createAdmin(req, res, next));
 

@@ -159,6 +159,21 @@ class AdminController {
       next(error);
     }
   }
+
+  async createQCMember(req, res, next) {
+    try {
+      const { full_name, email, phone, password } = req.body;
+      const newQC = await adminService.createQCMember({ full_name, email, phone, password });
+
+      return res.status(201).json({
+        status: 'success',
+        message: 'QC Evaluator member created successfully',
+        data: newQC,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AdminController();
