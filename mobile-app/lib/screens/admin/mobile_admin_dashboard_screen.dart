@@ -32,6 +32,36 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   int _rejectedCount = 0;
   double _successRate = 0.0;
 
+  int get _calculatedApprovedCount {
+    final count = _qcSubmissions.where((s) => s['status'] == 'Approved').length;
+    return count > 0 ? count : _approvedCount;
+  }
+
+  int get _calculatedRejectedCount {
+    final count = _qcSubmissions.where((s) => s['status'] == 'Rejected').length;
+    return count > 0 ? count : _rejectedCount;
+  }
+
+  int get _calculatedPendingCount {
+    final count = _qcSubmissions.where((s) => (s['status'] ?? 'Pending QC') != 'Approved' && (s['status'] ?? 'Pending QC') != 'Rejected').length;
+    return count > 0 ? count : _pendingQCCount;
+  }
+
+  int get _totalQCCount {
+    final total = _calculatedApprovedCount + _calculatedRejectedCount + _calculatedPendingCount;
+    return total > 0 ? total : 1;
+  }
+
+  double get _dynamicApprovedPct => (_calculatedApprovedCount / _totalQCCount) * 100;
+  double get _dynamicRejectedPct => (_calculatedRejectedCount / _totalQCCount) * 100;
+  double get _dynamicPendingPct => (_calculatedPendingCount / _totalQCCount) * 100;
+
+  double get _dynamicSuccessRate {
+    final evaluated = _calculatedApprovedCount + _calculatedRejectedCount;
+    if (evaluated == 0) return 0.0;
+    return (_calculatedApprovedCount / evaluated) * 100;
+  }
+
   // Vendors List (Dynamic API)
   final List<Map<String, dynamic>> _vendors = [];
 
@@ -775,13 +805,13 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   ),
                   child: Column(
                     children: [
-                      _buildBreakdownRow(Icons.check_circle_rounded, const Color(0xFF10B981), 'Approved', '$_approvedCount', '92.8%', const Color(0xFF10B981)),
+                      _buildBreakdownRow(Icons.check_circle_rounded, const Color(0xFF10B981), 'Approved', '$_calculatedApprovedCount', '${_dynamicApprovedPct.toStringAsFixed(1)}%', const Color(0xFF10B981)),
                       const Divider(height: 16),
-                      _buildBreakdownRow(Icons.cancel_rounded, const Color(0xFFEF4444), 'Rejected', '$_rejectedCount', '6.9%', const Color(0xFFEF4444)),
+                      _buildBreakdownRow(Icons.cancel_rounded, const Color(0xFFEF4444), 'Rejected', '$_calculatedRejectedCount', '${_dynamicRejectedPct.toStringAsFixed(1)}%', const Color(0xFFEF4444)),
                       const Divider(height: 16),
-                      _buildBreakdownRow(Icons.access_time_filled_rounded, const Color(0xFFF59E0B), 'Pending', '$_pendingQCCount', '0.3%', const Color(0xFFF59E0B)),
+                      _buildBreakdownRow(Icons.access_time_filled_rounded, const Color(0xFFF59E0B), 'Pending', '$_calculatedPendingCount', '${_dynamicPendingPct.toStringAsFixed(1)}%', const Color(0xFFF59E0B)),
                       const Divider(height: 16),
-                      _buildBreakdownRow(Icons.trending_up_rounded, const Color(0xFF2563EB), 'Success Rate', '$_successRate%', '', const Color(0xFF2563EB)),
+                      _buildBreakdownRow(Icons.trending_up_rounded, const Color(0xFF2563EB), 'Success Rate', '${_dynamicSuccessRate.toStringAsFixed(1)}%', '', const Color(0xFF2563EB)),
                     ],
                   ),
                 ),
