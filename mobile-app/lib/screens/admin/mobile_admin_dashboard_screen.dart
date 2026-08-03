@@ -1026,10 +1026,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               ),
               const SizedBox(width: 10),
               _buildQuickActionButton(
-                'Payments\nManagement',
-                Icons.account_balance_wallet_rounded,
+                'Candidate\nRoster',
+                Icons.people_rounded,
                 const Color(0xFFF59E0B),
-                () => setState(() => _activeNavIndex = 4),
+                () => setState(() => _activeNavIndex = 2),
               ),
               const SizedBox(width: 10),
               _buildQuickActionButton(
