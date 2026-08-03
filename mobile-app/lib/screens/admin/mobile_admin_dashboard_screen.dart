@@ -71,9 +71,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   // QC Submissions (Dynamic API)
   final List<Map<String, dynamic>> _qcSubmissions = [];
 
-  // Recent Activities (Dynamic API)
-  int _unreadNotificationsCount = 3;
+  // Recent Activities & Notifications (Dynamic API)
   final List<Map<String, dynamic>> _recentActivities = [];
+  int get _unreadNotificationsCount => _recentActivities.where((act) => act['read'] != true).length;
 
   // Modal Controllers
   final _vendorNameCtrl = TextEditingController();
@@ -263,6 +263,33 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 _qcSubmissions.clear();
                 _qcSubmissions.addAll(tempQC);
                 _pendingQCCount = _qcSubmissions.length;
+
+                // Dynamically populate live notifications center activities
+                _recentActivities.clear();
+                for (var cand in _candidates.take(2)) {
+                  _recentActivities.add({
+                    'title': 'Candidate Registration',
+                    'subtitle': '${cand['name']} registered under ${cand['vendorCode'] ?? "Vendor"}',
+                    'time': '10 mins ago',
+                    'icon': Icons.person_add_rounded,
+                    'color': const Color(0xFF2563EB),
+                    'read': false,
+                  });
+                }
+                for (var qc in tempQC.take(2)) {
+                  _recentActivities.add({
+                    'title': 'QC Video ${qc['status']}',
+                    'subtitle': '${qc['candidateName']} - ${qc['title']}',
+                    'time': 'Just now',
+                    'icon': qc['status'] == 'Approved'
+                        ? Icons.check_circle_rounded
+                        : (qc['status'] == 'Rejected' ? Icons.cancel_rounded : Icons.pending_rounded),
+                    'color': qc['status'] == 'Approved'
+                        ? const Color(0xFF10B981)
+                        : (qc['status'] == 'Rejected' ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
+                    'read': false,
+                  });
+                }
               });
             }
           }
@@ -313,6 +340,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           if (_pendingQCCount > 0) _pendingQCCount--;
         }
       }
+      _recentActivities.insert(0, {
+        'title': 'QC Video $newStatus',
+        'subtitle': 'Video $id evaluated as $newStatus',
+        'time': 'Just now',
+        'icon': newStatus == 'Approved' ? Icons.check_circle_rounded : Icons.cancel_rounded,
+        'color': newStatus == 'Approved' ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+        'read': false,
+      });
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1876,7 +1911,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                             TextButton.icon(
                               onPressed: () {
                                 setState(() {
-                                  _unreadNotificationsCount = 0;
                                   for (var act in _recentActivities) {
                                     act['read'] = true;
                                   }
@@ -1958,7 +1992,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                               if (isUnread) {
                                 setState(() {
                                   act['read'] = true;
-                                  if (_unreadNotificationsCount > 0) _unreadNotificationsCount--;
                                 });
                                 setModalState(() {});
                               }
