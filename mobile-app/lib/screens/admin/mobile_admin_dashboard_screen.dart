@@ -328,18 +328,21 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               _buildStandardAppBar('Vendors Directory', '${_vendors.length} Total Registered Vendors')
             else if (_activeNavIndex == 2)
               _buildStandardAppBar('Candidates Roster', '${_candidates.length} Total Enrolled Candidates')
+            else if (_activeNavIndex == 3)
+              _buildStandardAppBar('QC Queue', '${_qcSubmissions.where((s) => s['status'] != 'Approved').length} Pending QC Submissions')
             else
-              _buildStandardAppBar('QC Approved Portal', '${_qcSubmissions.length} Submissions in QC System'),
+              _buildStandardAppBar('QC Approved Portal', '${_qcSubmissions.where((s) => s['status'] == 'Approved').length} Submissions Approved'),
             
             // Dynamic Body Screens
             Expanded(
               child: IndexedStack(
-                index: _activeNavIndex.clamp(0, 3),
+                index: _activeNavIndex.clamp(0, 4),
                 children: [
                   _buildDashboardOverviewTab(),
                   _buildVendorsTab(),
                   _buildCandidatesTab(),
-                  _buildQCTab(),
+                  _buildQCQueueTab(),
+                  _buildQCApprovedTab(),
                 ],
               ),
             ),
@@ -356,7 +359,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           children: [
             const PoweredByFooter(),
             BottomNavigationBar(
-              currentIndex: _activeNavIndex.clamp(0, 3),
+              currentIndex: _activeNavIndex.clamp(0, 4),
               onTap: (idx) => setState(() => _activeNavIndex = idx),
               backgroundColor: Colors.white,
               selectedItemColor: const Color(0xFF1E3A8A),
@@ -369,6 +372,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Dashboard'),
                 BottomNavigationBarItem(icon: Icon(Icons.storefront_rounded), label: 'Vendors'),
                 BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Candidates'),
+                BottomNavigationBarItem(icon: Icon(Icons.pending_actions_rounded), label: 'QC Queue'),
                 BottomNavigationBarItem(icon: Icon(Icons.verified_rounded), label: 'QC Approved'),
               ],
             ),
@@ -1208,8 +1212,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
-  // TAB 3: QC QUEUE TAB
-  Widget _buildQCTab() {
+  // TAB 3: QC QUEUE TAB (Pending & In-Review Queue)
+  Widget _buildQCQueueTab() {
+    final pendingItems = _qcSubmissions.where((item) => (item['status'] ?? '') != 'Approved').toList();
+
     return Container(
       color: const Color(0xFFF8FAFC),
       child: RefreshIndicator(
@@ -1236,7 +1242,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   OutlinedButton.icon(
                     onPressed: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
                     icon: const Icon(Icons.download_rounded, size: 16, color: Color(0xFF7C3AED)),
-                    label: const Text('Export CSV', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
+                    label: const Text('Export Queue CSV', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFDDD6FE)),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1247,14 +1253,99 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               ),
               const SizedBox(height: 12),
 
-              if (_qcSubmissions.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: Text('No Submissions in QC Queue', style: TextStyle(color: Color(0xFF94A3B8)))),
+              if (pendingItems.isEmpty)
+                Container(
+                  width: double.maxFinite,
+                  padding: const EdgeInsets.all(36),
+                  margin: const EdgeInsets.only(top: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded, size: 48, color: Color(0xFF10B981)),
+                      SizedBox(height: 12),
+                      Text('All QC Submissions Cleared!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+                      SizedBox(height: 4),
+                      Text('There are currently no pending videos waiting for QC review.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    ],
+                  ),
                 )
               else
                 Column(
-                  children: _qcSubmissions.map((item) => _buildQCCard(item)).toList(),
+                  children: pendingItems.map((item) => _buildQCCard(item)).toList(),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // TAB 4: QC APPROVED TAB (Verified & Approved Datasets)
+  Widget _buildQCApprovedTab() {
+    final approvedItems = _qcSubmissions.where((item) => item['status'] == 'Approved').toList();
+
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      child: RefreshIndicator(
+        onRefresh: _loadDashboardData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text('Approved Video Datasets', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      SizedBox(height: 2),
+                      Text('QC Verified & Approved dataset collection', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
+                    icon: const Icon(Icons.download_rounded, size: 16, color: Color(0xFF10B981)),
+                    label: const Text('Export Approved', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFA7F3D0)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              if (approvedItems.isEmpty)
+                Container(
+                  width: double.maxFinite,
+                  padding: const EdgeInsets.all(36),
+                  margin: const EdgeInsets.only(top: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.verified_outlined, size: 48, color: Color(0xFF94A3B8)),
+                      SizedBox(height: 12),
+                      Text('No Approved Videos Yet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+                      SizedBox(height: 4),
+                      Text('Videos approved by QC reviewers will appear here.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                )
+              else
+                Column(
+                  children: approvedItems.map((item) => _buildQCCard(item)).toList(),
                 ),
             ],
           ),
@@ -1491,7 +1582,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   return;
                 }
 
-                String generatedCode = 'VEN-${Math.floor(1000 + Math.random() * 9000).toInt()}';
+                String generatedCode = 'VEN-${(DateTime.now().millisecondsSinceEpoch % 9000 + 1000)}';
                 try {
                   final headers = await AuthService.getAuthHeaders();
                   final res = await http.post(
