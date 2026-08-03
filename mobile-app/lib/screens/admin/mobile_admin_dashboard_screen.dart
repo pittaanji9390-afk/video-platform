@@ -25,14 +25,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   String _candidateSearchQuery = '';
   String _selectedTimeframe = 'This Week';
 
-  void _closeDrawerIfOpen() {
-    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
-      _scaffoldKey.currentState?.closeDrawer();
-    }
-  }
-
   void _navigateToTab(int index) {
-    _closeDrawerIfOpen();
     if (_activeNavIndex != index) {
       _navHistory.add(_activeNavIndex);
       setState(() {
@@ -576,7 +569,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 15),
               ),
               onTap: () {
-                _closeDrawerIfOpen();
+                Navigator.pop(context); // close drawer
                 _handleLogout();
               },
             ),
@@ -593,30 +586,30 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     required int index,
   }) {
     final bool isSelected = _activeNavIndex == index;
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Icon(
+          icon,
+          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569),
+          size: 22,
         ),
-        child: ListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          leading: Icon(
-            icon,
-            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569),
-            size: 22,
+        title: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF1E293B),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14.5,
           ),
-          title: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF1E293B),
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-              fontSize: 14.5,
-            ),
-          ),
-          onTap: () => _navigateToTab(index),
         ),
+        onTap: () {
+          Navigator.pop(context); // close drawer
+          _navigateToTab(index);
+        },
       ),
     );
   }
@@ -2031,6 +2024,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   }
 
   void _showActivityLogsDialog() {
+    int activeFilterIndex = 0;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2041,8 +2036,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (modalCtx, setModalState) {
-          int activeFilterIndex = 0;
-
           return SizedBox(
             height: MediaQuery.of(context).size.height,
             child: Column(
