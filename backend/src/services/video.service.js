@@ -161,12 +161,12 @@ class VideoService {
     }
   }
 
-  async getAllVideos({ candidate_id, vendor_id, status, page = 1, limit = 10 }) {
+  async getAllVideos({ candidate_id, vendor_id, vendor_code, status, page = 1, limit = 10 }) {
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     try {
-      let countQuery = 'SELECT COUNT(*) FROM videos WHERE deleted_at IS NULL';
+      let countQuery = 'SELECT COUNT(*) FROM videos v LEFT JOIN vendors ven ON v.vendor_id = ven.id WHERE v.deleted_at IS NULL';
       let selectQuery = `
-        SELECT v.id, v.candidate_id, c.full_name AS candidate_name, v.vendor_id, ven.company_name AS vendor_name,
+        SELECT v.id, v.candidate_id, c.full_name AS candidate_name, v.vendor_id, ven.company_name AS vendor_name, ven.vendor_code,
                v.title, v.description, v.s3_url, v.file_name, v.local_path, v.file_size, v.duration,
                v.environment_tag, v.latitude, v.longitude, v.device_id, v.recording_date, v.status,
                qr.audio_score, qr.lighting_score, qr.framing_score, qr.env_match_score, qr.qc_comments, qr.admin_comments,
@@ -183,17 +183,22 @@ class VideoService {
       const params = [];
       if (candidate_id) {
         params.push(candidate_id);
-        countQuery += ` AND candidate_id = $${params.length}`;
+        countQuery += ` AND v.candidate_id = $${params.length}`;
         selectQuery += ` AND v.candidate_id = $${params.length}`;
       }
       if (vendor_id) {
         params.push(vendor_id);
-        countQuery += ` AND vendor_id = $${params.length}`;
+        countQuery += ` AND v.vendor_id = $${params.length}`;
         selectQuery += ` AND v.vendor_id = $${params.length}`;
+      }
+      if (vendor_code) {
+        params.push(vendor_code);
+        countQuery += ` AND (LOWER(ven.vendor_code) = LOWER($${params.length}) OR v.vendor_id = $${params.length})`;
+        selectQuery += ` AND (LOWER(ven.vendor_code) = LOWER($${params.length}) OR v.vendor_id = $${params.length})`;
       }
       if (status) {
         params.push(status);
-        countQuery += ` AND LOWER(status) = LOWER($${params.length})`;
+        countQuery += ` AND LOWER(v.status) = LOWER($${params.length})`;
         selectQuery += ` AND LOWER(v.status) = LOWER($${params.length})`;
       }
 

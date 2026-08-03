@@ -175,6 +175,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
       final headers = await AuthService.getAuthHeaders();
       final session = await AuthService.restoreSession();
       final vendorId = session?['id'] ?? session?['vendor_id'] ?? '';
+      final vendorCode = _vendorCode.isNotEmpty ? _vendorCode : (session?['vendor_code'] ?? session?['code'] ?? '');
       final vendorName = session?['name'] ?? session?['vendor_name'] ?? _vendorName;
 
       _vendorUploads.clear();
@@ -184,10 +185,12 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
       int pendingCount = 0;
       int rejectedCount = 0;
 
-      // 1. Fetch from PostgreSQL REST API
-      final videoUrl = vendorId.isNotEmpty
-          ? '${ApiConstants.baseUrl}/api/v1/videos?vendor_id=$vendorId&limit=100'
-          : '${ApiConstants.baseUrl}/api/v1/videos?limit=100';
+      // 1. Fetch from PostgreSQL REST API using vendor_code or vendor_id
+      final videoUrl = vendorCode.isNotEmpty
+          ? '${ApiConstants.baseUrl}/api/v1/videos?vendor_code=$vendorCode&limit=100'
+          : (vendorId.isNotEmpty
+              ? '${ApiConstants.baseUrl}/api/v1/videos?vendor_id=$vendorId&limit=100'
+              : '${ApiConstants.baseUrl}/api/v1/videos?limit=100');
 
       final res = await http.get(Uri.parse(videoUrl), headers: headers).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
@@ -196,15 +199,20 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
         for (var vid in items) {
           final vId = vid['vendor_id']?.toString() ?? vid['vendorId']?.toString() ?? '';
+          final vCode = vid['vendor_code']?.toString() ?? vid['vendorCode']?.toString() ?? '';
           final vName = vid['vendor_name']?.toString() ?? vid['vendor']?.toString() ?? '';
+          final candId = vid['candidate_id']?.toString() ?? vid['candidateId']?.toString() ?? '';
 
-          // Strict Individual Vendor Scoping
-          if (vendorId.isNotEmpty || vendorName.isNotEmpty) {
+          // Vendor Code Scoping: match vendor_code OR vendor_id OR candidate enrolled in _vendorCandidates
+          if (vendorCode.isNotEmpty || vendorId.isNotEmpty || vendorName.isNotEmpty) {
+            final bool matchesVendorCode = vendorCode.isNotEmpty && vCode.isNotEmpty && vCode.toLowerCase() == vendorCode.toLowerCase();
             final bool matchesVendorId = vendorId.isNotEmpty && vId.isNotEmpty && vId == vendorId;
             final bool matchesVendorName = vendorName.isNotEmpty && vName.isNotEmpty && vName.toLowerCase().contains(vendorName.toLowerCase());
+            final bool isCandidateMatch = _vendorCandidates.any((c) => c['id'] == candId || (candId.isNotEmpty && c['id'] != null && candId.contains(c['id'].toString())));
 
-            if (vId.isNotEmpty && !matchesVendorId && !matchesVendorName) continue;
-            if (vName.isNotEmpty && !matchesVendorName && !matchesVendorId) continue;
+            if (!matchesVendorCode && !matchesVendorId && !matchesVendorName && !isCandidateMatch) {
+              if (vCode.isNotEmpty || vId.isNotEmpty) continue;
+            }
           }
 
           final id = vid['id']?.toString() ?? '';
@@ -252,15 +260,19 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
             for (var item in list) {
               final vId = item['vendorId']?.toString() ?? '';
+              final vCode = item['vendorCode']?.toString() ?? item['vendor_code']?.toString() ?? '';
               final vName = item['vendor']?.toString() ?? '';
+              final candId = item['candidateId']?.toString() ?? item['candidate_id']?.toString() ?? '';
 
-              // Strict Individual Vendor Scoping Check
-              if (vendorId.isNotEmpty || vendorName.isNotEmpty) {
+              if (vendorCode.isNotEmpty || vendorId.isNotEmpty || vendorName.isNotEmpty) {
+                final bool matchesVendorCode = vendorCode.isNotEmpty && vCode.isNotEmpty && vCode.toLowerCase() == vendorCode.toLowerCase();
                 final bool matchesVendorId = vendorId.isNotEmpty && vId.isNotEmpty && vId == vendorId;
                 final bool matchesVendorName = vendorName.isNotEmpty && vName.isNotEmpty && (vName.toLowerCase().contains(vendorName.toLowerCase()) || vendorName.toLowerCase().contains(vName.toLowerCase()));
+                final bool isCandidateMatch = _vendorCandidates.any((c) => c['id'] == candId || (candId.isNotEmpty && c['id'] != null && candId.contains(c['id'].toString())));
 
-                if (vId.isNotEmpty && !matchesVendorId && !matchesVendorName) continue;
-                if (vName.isNotEmpty && !matchesVendorName && !matchesVendorId) continue;
+                if (!matchesVendorCode && !matchesVendorId && !matchesVendorName && !isCandidateMatch) {
+                  if (vCode.isNotEmpty || vId.isNotEmpty) continue;
+                }
               }
 
               final id = item['id']?.toString() ?? '';

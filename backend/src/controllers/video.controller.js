@@ -138,8 +138,8 @@ class VideoController {
 
   async getAllVideos(req, res, next) {
     try {
-      const { candidate_id, vendor_id, status, page, limit } = req.query;
-      const result = await videoService.getAllVideos({ candidate_id, vendor_id, status, page, limit });
+      const { candidate_id, vendor_id, vendor_code, status, page, limit } = req.query;
+      const result = await videoService.getAllVideos({ candidate_id, vendor_id, vendor_code, status, page, limit });
 
       return res.status(200).json({
         status: 'success',
