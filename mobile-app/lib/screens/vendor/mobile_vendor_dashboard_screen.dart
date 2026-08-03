@@ -556,7 +556,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
   Widget build(BuildContext context) {
     return PopScope(
       canPop: _currentTab == 0 && _tabHistory.length <= 1,
-      onPopInvokedWithResult: (bool didPop, dynamic result) {
+      onPopInvoked: (bool didPop) {
         if (!didPop) {
           _goBackToPreviousTab();
         }
