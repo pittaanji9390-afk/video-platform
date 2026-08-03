@@ -15,7 +15,7 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _vendorCodeController = TextEditingController(text: 'VEN-001');
+  final TextEditingController _vendorCodeController = TextEditingController();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
