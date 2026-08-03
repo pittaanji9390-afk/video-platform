@@ -464,13 +464,12 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             // Dynamic Body Screens
             Expanded(
               child: IndexedStack(
-                index: _activeNavIndex.clamp(0, 4),
+                index: _activeNavIndex.clamp(0, 3),
                 children: [
                   _buildDashboardOverviewTab(),
                   _buildVendorsTab(),
                   _buildCandidatesTab(),
                   _buildQCTab(),
-                  _buildPaymentsTab(),
                 ],
               ),
             ),
@@ -487,7 +486,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           children: [
             const PoweredByFooter(),
             BottomNavigationBar(
-              currentIndex: _activeNavIndex.clamp(0, 4),
+              currentIndex: _activeNavIndex.clamp(0, 3),
               onTap: (idx) => setState(() => _activeNavIndex = idx),
               backgroundColor: Colors.white,
               selectedItemColor: const Color(0xFF1E3A8A),
@@ -500,8 +499,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Dashboard'),
                 BottomNavigationBarItem(icon: Icon(Icons.storefront_rounded), label: 'Vendors'),
                 BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Candidates'),
-                BottomNavigationBarItem(icon: Icon(Icons.verified_user_rounded), label: 'QC Review'),
-                BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_rounded), label: 'Payments'),
+                BottomNavigationBarItem(icon: Icon(Icons.verified_user_rounded), label: 'QC Queue'),
               ],
             ),
           ],
@@ -691,9 +689,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             style: const TextStyle(color: Color(0xFF0F172A), fontSize: 19, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
-          Text(
-            badgeText,
-            style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.bold),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              badgeText,
+              style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.bold),
+              maxLines: 1,
+            ),
           ),
         ],
       ),
