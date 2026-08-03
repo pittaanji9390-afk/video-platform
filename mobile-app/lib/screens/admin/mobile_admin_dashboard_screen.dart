@@ -491,10 +491,23 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 onPressed: _loadDashboardData,
                 tooltip: 'Refresh Data',
               ),
-              IconButton(
-                icon: const Icon(Icons.logout_rounded, color: Color(0xFFFCA5A5), size: 22),
-                onPressed: _handleLogout,
-                tooltip: 'Logout',
+              GestureDetector(
+                onTap: _showAdminProfileModal,
+                child: Container(
+                  margin: const EdgeInsets.only(left: 6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+                  ),
+                  child: const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Color(0xFF2563EB),
+                    child: Text(
+                      'A',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -569,10 +582,23 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                         ),
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.logout_rounded, color: Color(0xFFFCA5A5)),
-                    onPressed: _handleLogout,
-                    tooltip: 'Logout',
+                  GestureDetector(
+                    onTap: _showAdminProfileModal,
+                    child: Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+                      ),
+                      child: const CircleAvatar(
+                        radius: 17,
+                        backgroundColor: Color(0xFF2563EB),
+                        child: Text(
+                          'A',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -2095,6 +2121,194 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           ),
         ),
       ),
+    );
+  }
+
+  void _showAdminProfileModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Admin Profile',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0B192C), Color(0xFF1E3E62)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF2563EB),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'A',
+                        style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'System Admin',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'ACTIVE',
+                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'admin@elevateiq.com',
+                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0x332563EB),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF60A5FA).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.shield_rounded, color: Color(0xFF60A5FA), size: 12),
+                              SizedBox(width: 4),
+                              Text(
+                                'Super Administrator',
+                                style: TextStyle(color: Color(0xFF60A5FA), fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Account Information',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  _buildProfileInfoRow(Icons.badge_rounded, 'Role', 'Platform Administrator'),
+                  const Divider(height: 20),
+                  _buildProfileInfoRow(Icons.email_rounded, 'Email', 'admin@elevateiq.com'),
+                  const Divider(height: 20),
+                  _buildProfileInfoRow(Icons.security_rounded, 'Permissions', 'Full Management Access'),
+                  const Divider(height: 20),
+                  _buildProfileInfoRow(Icons.verified_user_rounded, 'Status', 'Verified Super Admin'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _handleLogout();
+                },
+                icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  'Log Out',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: const Color(0xFF2563EB), size: 18),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            const SizedBox(height: 2),
+            Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          ],
+        ),
+      ],
     );
   }
 
