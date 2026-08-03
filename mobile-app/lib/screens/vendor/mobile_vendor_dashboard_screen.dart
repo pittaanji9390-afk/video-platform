@@ -20,6 +20,7 @@ class MobileVendorDashboardScreen extends StatefulWidget {
 }
 
 class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentTab = 0; // 0: Home, 1: Candidates, 2: Uploads, 3: Notifications, 4: Profile
   String _activeUploadFilter = 'All';
 
@@ -527,7 +528,9 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: _buildSideDrawer(),
       resizeToAvoidBottomInset: false,
       body: IndexedStack(
         index: _currentTab,
@@ -558,6 +561,148 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // SIDE MENU DRAWER MATCHING DESIGN SPEC EXACTLY
+  Widget _buildSideDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      width: MediaQuery.of(context).size.width * 0.78,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Drawer Header with Icon Avatar & Vendor Info
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFA7F3D0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.storefront_rounded, color: Color(0xFF047857), size: 30),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Vendor Operations',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _vendorName,
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Navigation Items List
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                children: [
+                  _buildDrawerNavItem(
+                    icon: Icons.home_rounded,
+                    label: 'Dashboard',
+                    index: 0,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildDrawerNavItem(
+                    icon: Icons.people_alt_rounded,
+                    label: 'Candidates',
+                    index: 1,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildDrawerNavItem(
+                    icon: Icons.cloud_upload_rounded,
+                    label: 'Uploads',
+                    index: 2,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildDrawerNavItem(
+                    icon: Icons.notifications_rounded,
+                    label: 'Alerts',
+                    index: 3,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildDrawerNavItem(
+                    icon: Icons.person_rounded,
+                    label: 'Profile',
+                    index: 4,
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(indent: 16, endIndent: 16, color: Color(0xFFE2E8F0)),
+            // Logout Item
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              leading: const Icon(Icons.logout_rounded, color: Color(0xFF059669), size: 24),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              onTap: () {
+                Navigator.pop(context); // close drawer
+                _handleLogout();
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final bool isSelected = _currentTab == index;
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFECFDF5) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Icon(
+          icon,
+          color: isSelected ? const Color(0xFF059669) : const Color(0xFF475569),
+          size: 22,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF059669) : const Color(0xFF1E293B),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14.5,
+          ),
+        ),
+        onTap: () {
+          Navigator.pop(context); // close drawer
+          setState(() {
+            _currentTab = index;
+          });
+        },
       ),
     );
   }
@@ -597,6 +742,15 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                     children: [
                       Row(
                         children: [
+                          Builder(
+                            builder: (ctx) => IconButton(
+                              icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+                              onPressed: () => Scaffold.of(ctx).openDrawer(),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
                           const CircleAvatar(
                             backgroundColor: Colors.white24,
                             child: Icon(Icons.storefront_rounded, color: Colors.white),
