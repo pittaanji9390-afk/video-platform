@@ -24,8 +24,11 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
   String _activeUploadFilter = 'All';
 
   // Vendor session info
-  String _vendorName = 'Acme Video Solutions';
+  String _vendorName = 'Vendor Operations';
   String _vendorCode = '';
+  String _vendorContact = 'Vendor Contact';
+  String _vendorEmail = 'vendor@elevateiq.com';
+  String _vendorPhone = '+91 98765 00000';
 
   // Dynamic stat counters (Defaulting to ZERO as requested)
   int _totalUploadedVideosCount = 0;
@@ -115,6 +118,15 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
       if (session != null) {
         if (session['name'] != null && session['name']!.isNotEmpty) {
           _vendorName = session['name']!;
+        }
+        if (session['email'] != null && session['email']!.isNotEmpty) {
+          _vendorEmail = session['email']!;
+        }
+        if (session['contact_person'] != null && session['contact_person']!.isNotEmpty) {
+          _vendorContact = session['contact_person']!;
+        }
+        if (session['phone'] != null && session['phone']!.isNotEmpty) {
+          _vendorPhone = session['phone']!;
         }
         final codeFromSession = session['vendor_code'] ?? session['code'] ?? session['vendorCode'];
         if (codeFromSession != null && codeFromSession.toString().isNotEmpty) {
@@ -1226,13 +1238,15 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                 children: [
                   _buildProfileRow(Icons.storefront_outlined, 'Vendor Name', _vendorName),
                   const Divider(),
+                  _buildProfileRow(Icons.person_outline, 'Contact Person', _vendorContact),
+                  const Divider(),
                   _buildProfileRow(Icons.vpn_key_outlined, 'Vendor Code', referralCode),
                   const Divider(),
+                  _buildProfileRow(Icons.email_outlined, 'Email Address', _vendorEmail),
+                  const Divider(),
+                  _buildProfileRow(Icons.phone_outlined, 'Mobile Number', _vendorPhone),
+                  const Divider(),
                   _buildProfileRow(Icons.people_outline, 'Active Candidates', '$_activeCandidatesCount Candidates'),
-                  const Divider(),
-                  _buildProfileRow(Icons.video_library_outlined, 'Approved Videos', '$_approvedVideosCount Clips'),
-                  const Divider(),
-                  _buildProfileRow(Icons.hourglass_bottom_rounded, 'Hours Collected', _formattedHoursCollected),
                 ],
               ),
             ),
