@@ -16,6 +16,7 @@ class MobileAdminDashboardScreen extends StatefulWidget {
 }
 
 class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _activeNavIndex = 0;
   final List<int> _navHistory = [];
   bool _isLoading = false;
@@ -405,7 +406,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: _buildAdminSideDrawer(),
       body: SafeArea(
         top: false,
         child: Column(
@@ -467,6 +470,146 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ADMIN SIDE MENU DRAWER MATCHING DESIGN SPEC EXACTLY
+  Widget _buildAdminSideDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      width: MediaQuery.of(context).size.width * 0.78,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Drawer Header with Dark Circle Avatar & Admin Info
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0F172A),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.shield_rounded, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Admin Dashboard',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Platform Management & Control',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Navigation Items List (Matching exact screenshot items & royal blue highlights)
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                children: [
+                  _buildAdminDrawerNavItem(
+                    icon: Icons.home_rounded,
+                    label: 'Dashboard',
+                    index: 0,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildAdminDrawerNavItem(
+                    icon: Icons.storefront_rounded,
+                    label: 'Vendors',
+                    index: 1,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildAdminDrawerNavItem(
+                    icon: Icons.people_alt_rounded,
+                    label: 'Candidates',
+                    index: 2,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildAdminDrawerNavItem(
+                    icon: Icons.assignment_late_rounded,
+                    label: 'QC Queue',
+                    index: 3,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildAdminDrawerNavItem(
+                    icon: Icons.verified_rounded,
+                    label: 'QC Approved',
+                    index: 4,
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(indent: 16, endIndent: 16, color: Color(0xFFE2E8F0)),
+            // Logout Item
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              leading: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 24),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              onTap: () {
+                Navigator.pop(context); // close drawer
+                _handleLogout();
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminDrawerNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final bool isSelected = _activeNavIndex == index;
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Icon(
+          icon,
+          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569),
+          size: 22,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF1E293B),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14.5,
+          ),
+        ),
+        onTap: () {
+          Navigator.pop(context); // close drawer
+          _navigateToTab(index);
+        },
       ),
     );
   }
@@ -558,16 +701,30 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Admin Dashboard',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Builder(
+                    builder: (ctx) => IconButton(
+                      icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+                      onPressed: () => Scaffold.of(ctx).openDrawer(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Open Side Menu',
+                    ),
                   ),
-                  Text(
-                    'Platform Management & Control',
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Admin Dashboard',
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Platform Management & Control',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      ),
+                    ],
                   ),
                 ],
               ),
