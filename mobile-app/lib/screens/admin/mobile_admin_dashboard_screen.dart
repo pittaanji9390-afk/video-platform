@@ -23,173 +23,26 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   String _candidateSearchQuery = '';
   String _selectedTimeframe = 'This Week';
 
-  // Dynamic Dashboard Stats (populated from API with instant 0ms fallback defaults)
-  int _totalVendorsCount = 58;
-  int _totalCandidatesCount = 1248;
-  int _totalVideosCount = 8542;
-  int _pendingQCCount = 124;
-  int _approvedCount = 7950;
-  int _rejectedCount = 592;
-  double _successRate = 92.8;
+  // Dynamic Dashboard Stats (populated dynamically from live API database)
+  int _totalVendorsCount = 0;
+  int _totalCandidatesCount = 0;
+  int _totalVideosCount = 0;
+  int _pendingQCCount = 0;
+  int _approvedCount = 0;
+  int _rejectedCount = 0;
+  double _successRate = 0.0;
 
-  // Vendors List (Dynamic)
-  final List<Map<String, dynamic>> _vendors = [
-    {
-      'id': 'VEN-001',
-      'vendor_code': 'VEN-001',
-      'name': 'ABC Solutions',
-      'contact': 'John Doe',
-      'email': 'abc@vendor.com',
-      'phone': '+1 555-0192',
-      'candidates': 45,
-      'videos': 320,
-      'status': 'Active',
-    },
-    {
-      'id': 'VEN-002',
-      'vendor_code': 'VEN-002',
-      'name': 'Global Media Partners',
-      'contact': 'Sarah Smith',
-      'email': 'global@vendor.com',
-      'phone': '+1 555-0193',
-      'candidates': 28,
-      'videos': 210,
-      'status': 'Active',
-    },
-    {
-      'id': 'VEN-003',
-      'vendor_code': 'VEN-003',
-      'name': 'Apex Data Collection',
-      'contact': 'Michael Brown',
-      'email': 'apex@vendor.com',
-      'phone': '+1 555-0194',
-      'candidates': 19,
-      'videos': 140,
-      'status': 'Active',
-    },
-  ];
+  // Vendors List (Dynamic API)
+  final List<Map<String, dynamic>> _vendors = [];
 
-  // Candidates List (Dynamic)
-  final List<Map<String, dynamic>> _candidates = [
-    {
-      'id': 'CND-001',
-      'name': 'Neha Singh',
-      'email': 'neha@example.com',
-      'phone': '+1 555-0101',
-      'vendor': 'ABC Solutions',
-      'videos': 4,
-      'status': 'Active',
-    },
-    {
-      'id': 'CND-002',
-      'name': 'Rahul Sharma',
-      'email': 'rahul@example.com',
-      'phone': '+1 555-0102',
-      'vendor': 'ABC Solutions',
-      'videos': 3,
-      'status': 'Active',
-    },
-    {
-      'id': 'CND-003',
-      'name': 'Emily Davis',
-      'email': 'emily@example.com',
-      'phone': '+1 555-0103',
-      'vendor': 'Global Media Partners',
-      'videos': 2,
-      'status': 'Active',
-    },
-  ];
+  // Candidates List (Dynamic API)
+  final List<Map<String, dynamic>> _candidates = [];
 
-  // QC Submissions (Dynamic)
-  final List<Map<String, dynamic>> _qcSubmissions = [
-    {
-      'id': 'VID-8542',
-      'raw_id': 'demo_vid_001',
-      'title': 'Kitchen Video - Rahul',
-      'candidateName': 'Rahul Sharma',
-      'vendor': 'ABC Solutions',
-      'duration': '12 Mins',
-      'status': 'Pending QC',
-    },
-    {
-      'id': 'VID-8541',
-      'raw_id': 'demo_vid_002',
-      'title': 'Self Introduction Task',
-      'candidateName': 'Neha Singh',
-      'vendor': 'ABC Solutions',
-      'duration': '15 Mins',
-      'status': 'Pending QC',
-    },
-    {
-      'id': 'VID-8540',
-      'raw_id': 'demo_vid_003',
-      'title': 'Technical Assessment Task',
-      'candidateName': 'Emily Davis',
-      'vendor': 'Global Media Partners',
-      'duration': '18 Mins',
-      'status': 'Pending QC',
-    },
-  ];
+  // QC Submissions (Dynamic API)
+  final List<Map<String, dynamic>> _qcSubmissions = [];
 
-  // Recent Activities (Dynamic)
-  final List<Map<String, dynamic>> _recentActivities = [
-    {
-      'title': 'New Vendor Added',
-      'subtitle': 'ABC Solutions',
-      'time': '10:30 AM',
-      'icon': Icons.business_rounded,
-      'color': const Color(0xFF2563EB),
-    },
-    {
-      'title': 'Video Approved',
-      'subtitle': 'Kitchen Video - Rahul',
-      'time': '09:45 AM',
-      'icon': Icons.check_circle_rounded,
-      'color': const Color(0xFF10B981),
-    },
-    {
-      'title': 'Payment Released',
-      'subtitle': 'Vendor ABC - ₹16,200',
-      'time': 'Yesterday',
-      'icon': Icons.cloud_upload_rounded,
-      'color': const Color(0xFF7C3AED),
-    },
-    {
-      'title': 'New Candidate Registered',
-      'subtitle': 'Neha Singh by Vendor 001',
-      'time': '2 May 2024',
-      'icon': Icons.person_rounded,
-      'color': const Color(0xFFF59E0B),
-    },
-  ];
-
-  // Payments List (Dynamic)
-  final List<Map<String, dynamic>> _payments = [
-    {
-      'id': 'PAY-1001',
-      'vendor': 'ABC Solutions',
-      'amount': '₹16,200',
-      'videos': 320,
-      'date': 'Yesterday',
-      'status': 'Released',
-    },
-    {
-      'id': 'PAY-1002',
-      'vendor': 'Global Media Partners',
-      'amount': '₹12,800',
-      'videos': 210,
-      'date': '28 Apr 2024',
-      'status': 'Released',
-    },
-    {
-      'id': 'PAY-1003',
-      'vendor': 'Apex Data Collection',
-      'amount': '₹8,500',
-      'videos': 140,
-      'date': 'Pending',
-      'status': 'Pending Approval',
-    },
-  ];
+  // Recent Activities (Dynamic API)
+  final List<Map<String, dynamic>> _recentActivities = [];
 
   // Modal Controllers
   final _vendorNameCtrl = TextEditingController();
@@ -199,34 +52,12 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   final _vendorPasswordCtrl = TextEditingController();
   bool _obscureVendorPassword = true;
 
-  // QC Member Controllers & State
+  // QC Member Controllers & State (Dynamic API)
   final _qcNameCtrl = TextEditingController();
   final _qcEmailCtrl = TextEditingController();
   final _qcPhoneCtrl = TextEditingController();
   final _qcPasswordCtrl = TextEditingController();
-  final List<Map<String, dynamic>> _qcMembers = [
-    {
-      'id': 'QC-001',
-      'name': 'QC Evaluator',
-      'email': 'qc@demo.com',
-      'role': 'Lead QC Reviewer',
-      'phone': '+1 555-0199',
-    },
-    {
-      'id': 'QC-002',
-      'name': 'Senior Reviewer A',
-      'email': 'reviewer.a@demo.com',
-      'role': 'Senior Assessor',
-      'phone': '+1 555-0200',
-    },
-    {
-      'id': 'QC-003',
-      'name': 'Quality Lead B',
-      'email': 'lead.b@demo.com',
-      'role': 'Quality Specialist',
-      'phone': '+1 555-0201',
-    },
-  ];
+  final List<Map<String, dynamic>> _qcMembers = [];
 
   @override
   void initState() {
@@ -295,14 +126,16 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
           if (mounted) {
             setState(() {
-              if (vCount != null && vCount > 0) _totalVendorsCount = vCount;
-              if (cCount != null && cCount > 0) _totalCandidatesCount = cCount;
-              if (vidCount != null && vidCount > 0) _totalVideosCount = vidCount;
-              if (pending != null) _pendingQCCount = pending;
-              if (appr != null) _approvedCount = appr;
-              if (rej != null) _rejectedCount = rej;
+              _totalVendorsCount = vCount ?? _vendors.length;
+              _totalCandidatesCount = cCount ?? _candidates.length;
+              _totalVideosCount = vidCount ?? _qcSubmissions.length;
+              _pendingQCCount = pending ?? _qcSubmissions.length;
+              _approvedCount = appr ?? 0;
+              _rejectedCount = rej ?? 0;
               if (_approvedCount + _rejectedCount > 0) {
                 _successRate = double.parse(((_approvedCount / (_approvedCount + _rejectedCount)) * 100).toStringAsFixed(1));
+              } else {
+                _successRate = 0.0;
               }
             });
           }
