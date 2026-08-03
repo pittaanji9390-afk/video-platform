@@ -1866,7 +1866,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         children: [
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 10),
