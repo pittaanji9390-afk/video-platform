@@ -42,6 +42,16 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
+      textTheme: const TextTheme(
+        bodyMedium: TextStyle(color: Color(0xFF0F172A)),
+        bodyLarge: TextStyle(color: Color(0xFF0F172A)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+        labelStyle: const TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.bold),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
