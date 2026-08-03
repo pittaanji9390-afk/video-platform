@@ -695,10 +695,18 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   child: DropdownButton<String>(
                     value: _selectedTimeframe,
                     isDense: true,
+                    dropdownColor: Colors.white,
+                    icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF334155)),
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                     items: const [
-                      DropdownMenuItem(value: 'This Week', child: Text('This Week')),
-                      DropdownMenuItem(value: 'This Month', child: Text('This Month')),
+                      DropdownMenuItem(
+                        value: 'This Week',
+                        child: Text('This Week', style: TextStyle(color: Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'This Month',
+                        child: Text('This Month', style: TextStyle(color: Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) setState(() => _selectedTimeframe = val);
@@ -1911,6 +1919,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 value: selectedReviewer,
+                dropdownColor: Colors.white,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
