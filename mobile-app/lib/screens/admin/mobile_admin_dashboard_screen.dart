@@ -1402,27 +1402,12 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Approved Video Datasets', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      SizedBox(height: 2),
-                      Text('QC Verified & Approved dataset collection', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                    ],
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
-                    icon: const Icon(Icons.download_rounded, size: 16, color: Color(0xFF10B981)),
-                    label: const Text('Export Approved', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFA7F3D0)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('Approved Video Datasets', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  SizedBox(height: 2),
+                  Text('QC Verified & Approved dataset collection', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                 ],
               ),
               const SizedBox(height: 12),
