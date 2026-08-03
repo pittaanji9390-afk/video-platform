@@ -945,6 +945,8 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
+                                const SizedBox(height: 2),
+                                Text('Vendor Code: ${c['vendor_code'] ?? c['vendorCode'] ?? 'VEN-001'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
                                 if (c['email'] != null && c['email'].toString().isNotEmpty) ...[
                                   const SizedBox(height: 2),
                                   Text('Email: ${c['email']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
