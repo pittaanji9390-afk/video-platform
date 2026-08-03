@@ -1107,12 +1107,12 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 children: [
                   ElevatedButton.icon(
                     onPressed: _showAddVendorDialog,
-                    icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                    label: const Text('Add Vendor', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 18, color: Colors.white),
+                    label: const Text('+ Create New Vendor', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E3A8A),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ],
@@ -1617,7 +1617,29 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 } catch (_) {}
 
                 if (mounted) {
+                  setState(() {
+                    _vendors.insert(0, {
+                      'id': 'VEN-00${_vendors.length + 1}',
+                      'vendor_code': 'VEN-00${_vendors.length + 1}',
+                      'name': company,
+                      'contact': _contactPersonCtrl.text.trim().isNotEmpty ? _contactPersonCtrl.text.trim() : 'Contact Person',
+                      'email': email,
+                      'phone': _vendorPhoneCtrl.text.trim().isNotEmpty ? _vendorPhoneCtrl.text.trim() : 'N/A',
+                      'candidates': 0,
+                      'videos': 0,
+                      'status': 'Active',
+                    });
+                    _totalVendorsCount = _vendors.length;
+                  });
+
                   Navigator.pop(dialogCtx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('New Vendor "$company" created successfully!'),
+                      backgroundColor: const Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                   _loadDashboardData();
                 }
               },
