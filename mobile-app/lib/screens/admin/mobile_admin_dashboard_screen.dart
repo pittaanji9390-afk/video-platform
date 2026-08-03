@@ -2040,7 +2040,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: iconColor.withValues(alpha: 0.12),
+                                      color: iconColor.withOpacity(0.12),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(iconData, color: iconColor, size: 22),
@@ -2215,7 +2215,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                           decoration: BoxDecoration(
                             color: const Color(0x332563EB),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF60A5FA).withValues(alpha: 0.3)),
+                            border: Border.all(color: const Color(0xFF60A5FA).withOpacity(0.3)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -2294,7 +2294,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+            color: const Color(0xFF2563EB).withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: const Color(0xFF2563EB), size: 18),
