@@ -22,7 +22,34 @@ class MobileVendorDashboardScreen extends StatefulWidget {
 class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentTab = 0; // 0: Home, 1: Candidates, 2: Uploads, 3: Notifications, 4: Profile
+  final List<int> _tabHistory = [0];
   String _activeUploadFilter = 'All';
+
+  void _navigateToTab(int index) {
+    if (_currentTab != index) {
+      if (_tabHistory.isEmpty || _tabHistory.last != index) {
+        _tabHistory.add(index);
+      }
+      setState(() {
+        _currentTab = index;
+      });
+    }
+  }
+
+  void _goBackToPreviousTab() {
+    if (_tabHistory.length > 1) {
+      _tabHistory.removeLast();
+      setState(() {
+        _currentTab = _tabHistory.last;
+      });
+    } else if (_currentTab != 0) {
+      setState(() {
+        _currentTab = 0;
+        _tabHistory.clear();
+        _tabHistory.add(0);
+      });
+    }
+  }
 
   // Vendor session info
   String _vendorName = 'Vendor Operations';
@@ -527,40 +554,48 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF8FAFC),
-      drawer: _buildSideDrawer(),
-      resizeToAvoidBottomInset: false,
-      body: IndexedStack(
-        index: _currentTab,
-        children: [
-          _buildHomeDashboardTab(),
-          _buildCandidatesTab(),
-          _buildUploadStatusTab(),
-          _buildNotificationsTab(),
-          _buildProfileTab(),
-        ],
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const PoweredByFooter(),
-          BottomNavigationBar(
-            currentIndex: _currentTab,
-            onTap: (idx) => setState(() => _currentTab = idx),
-            selectedItemColor: const Color(0xFF059669),
-            unselectedItemColor: Colors.grey,
-            type: BottomNavigationBarType.fixed,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Candidates'),
-              BottomNavigationBarItem(icon: Icon(Icons.cloud_upload_rounded), label: 'Uploads'),
-              BottomNavigationBarItem(icon: Icon(Icons.notifications_rounded), label: 'Alerts'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
-            ],
-          ),
-        ],
+    return PopScope(
+      canPop: _currentTab == 0 && _tabHistory.length <= 1,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (!didPop) {
+          _goBackToPreviousTab();
+        }
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: const Color(0xFFF8FAFC),
+        drawer: _buildSideDrawer(),
+        resizeToAvoidBottomInset: false,
+        body: IndexedStack(
+          index: _currentTab,
+          children: [
+            _buildHomeDashboardTab(),
+            _buildCandidatesTab(),
+            _buildUploadStatusTab(),
+            _buildNotificationsTab(),
+            _buildProfileTab(),
+          ],
+        ),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const PoweredByFooter(),
+            BottomNavigationBar(
+              currentIndex: _currentTab,
+              onTap: (idx) => _navigateToTab(idx),
+              selectedItemColor: const Color(0xFF059669),
+              unselectedItemColor: Colors.grey,
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+                BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Candidates'),
+                BottomNavigationBarItem(icon: Icon(Icons.cloud_upload_rounded), label: 'Uploads'),
+                BottomNavigationBarItem(icon: Icon(Icons.notifications_rounded), label: 'Alerts'),
+                BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -699,9 +734,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
         ),
         onTap: () {
           Navigator.pop(context); // close drawer
-          setState(() {
-            _currentTab = index;
-          });
+          _navigateToTab(index);
         },
       ),
     );
@@ -1025,19 +1058,33 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                const Text(
-                  'Candidate Directory',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A), size: 24),
+                  onPressed: _goBackToPreviousTab,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Go Back',
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _vendorCode.isNotEmpty
-                      ? 'Candidates enrolled under Vendor Code: $_vendorCode'
-                      : 'Candidates enrolled under your Vendor Code',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Candidate Directory',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _vendorCode.isNotEmpty
+                            ? 'Candidates enrolled under Vendor Code: $_vendorCode'
+                            : 'Candidates enrolled under your Vendor Code',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1193,16 +1240,35 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Upload Status',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _vendorCode.isNotEmpty
-                  ? 'Candidate dataset video uploads for Vendor Code: $_vendorCode'
-                  : 'Candidate dataset video uploads for your Vendor Code',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A), size: 24),
+                  onPressed: _goBackToPreviousTab,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Go Back',
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Upload Status',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _vendorCode.isNotEmpty
+                            ? 'Candidate dataset video uploads for Vendor Code: $_vendorCode'
+                            : 'Candidate dataset video uploads for your Vendor Code',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
 
@@ -1348,7 +1414,19 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Notifications', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A), size: 24),
+                      onPressed: _goBackToPreviousTab,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Go Back',
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Notifications', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  ],
+                ),
                 TextButton(
                   onPressed: _markNotificationsAsRead,
                   child: const Text('Mark all read', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -1398,7 +1476,20 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
         padding: const EdgeInsets.all(16),
         child: Column(
         children: [
-          const SizedBox(height: 10),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A), size: 24),
+                onPressed: _goBackToPreviousTab,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Go Back',
+              ),
+              const SizedBox(width: 10),
+              const Text('Vendor Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            ],
+          ),
+          const SizedBox(height: 14),
           CircleAvatar(
             radius: 40,
             backgroundColor: const Color(0xFF059669),
