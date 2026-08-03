@@ -535,25 +535,16 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
-                    onPressed: () => _showSystemDrawerDialog(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Admin Dashboard',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(width: 4),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Admin Dashboard',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Platform Management & Control',
-                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                      ),
-                    ],
+                  Text(
+                    'Platform Management & Control',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
                   ),
                 ],
               ),
