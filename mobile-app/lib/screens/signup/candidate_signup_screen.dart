@@ -163,8 +163,10 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Enter candidate email (e.g. candidate@gmail.com)',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
@@ -209,8 +211,10 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Create candidate password',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF94A3B8)),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -263,8 +267,10 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _vendorCodeController,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Enter Vendor Code (e.g. VEN-001)',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.storefront_outlined, color: Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
@@ -305,8 +311,10 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _fullNameController,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: 'Enter Full Name',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
