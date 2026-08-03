@@ -325,8 +325,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: _isLoading ? null : () => _handleLogin('admin@demo.com', 'admin'),
-                              icon: const Icon(Icons.shield_outlined, size: 16, color: Colors.white),
-                              label: const Text('Admin Dashboard', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              icon: const Icon(Icons.shield_outlined, size: 14, color: Colors.white),
+                              label: const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF1E3A8A),
                                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -334,14 +334,27 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: _isLoading ? null : () => _handleLogin('vendor@demo.com', 'vendor'),
-                              icon: const Icon(Icons.storefront_outlined, size: 16, color: Colors.white),
-                              label: const Text('Vendor Portal', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              icon: const Icon(Icons.storefront_outlined, size: 14, color: Colors.white),
+                              label: const Text('Vendor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF059669),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoading ? null : () => _handleLogin('qc@demo.com', 'qc'),
+                              icon: const Icon(Icons.verified_user_outlined, size: 14, color: Colors.white),
+                              label: const Text('QC Team', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7C3AED),
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),

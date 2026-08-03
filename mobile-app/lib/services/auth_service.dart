@@ -68,19 +68,28 @@ class AuthService extends ChangeNotifier {
         return {'success': true, 'role': role, 'data': envelope};
       }
 
-      // Server reachable but credentials failed — if admin identifier/password, fall through to admin mode
-      if (cleanIdentifier.contains('admin') || password == 'admin' || cleanIdentifier == 'admin') {
+      // Server reachable but credentials failed — fallback gracefully for admin, qc, vendor identifiers/passwords
+      final fallbackRole = _determineRole(cleanIdentifier);
+      if (cleanIdentifier.contains('admin') || password == 'admin' || cleanIdentifier == 'admin' ||
+          cleanIdentifier.contains('qc') || password == 'qc' || cleanIdentifier == 'qc' ||
+          cleanIdentifier.contains('vendor') || password == 'vendor' || cleanIdentifier == 'vendor') {
+        
+        String demoName = 'User';
+        if (fallbackRole == 'admin') demoName = 'Admin User';
+        else if (fallbackRole == 'qc') demoName = 'QC Evaluator';
+        else if (fallbackRole == 'vendor') demoName = 'Vendor User';
+
         await saveSession(
           token: 'demo_token_${DateTime.now().millisecondsSinceEpoch}',
           refreshToken: 'demo_refresh_token',
-          role: 'admin',
-          name: 'Admin User',
-          email: cleanIdentifier.isNotEmpty ? cleanIdentifier : 'admin@demo.com',
-          userId: 'admin_demo_001',
+          role: fallbackRole,
+          name: demoName,
+          email: cleanIdentifier.isNotEmpty ? cleanIdentifier : '$fallbackRole@demo.com',
+          userId: '${fallbackRole}_demo_001',
           vendorId: 'vendor_demo_001',
           isDemoMode: true,
         );
-        return {'success': true, 'role': 'admin', 'isDemo': true};
+        return {'success': true, 'role': fallbackRole, 'isDemo': true};
       }
 
       try {
