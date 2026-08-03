@@ -458,8 +458,15 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         top: false,
         child: Column(
           children: [
-            // Top Header & Executive Greeting Section
-            _buildTopExecutiveHeader(),
+            // Top Executive Header is ONLY visible on Dashboard tab (Index 0)
+            if (_activeNavIndex == 0)
+              _buildTopExecutiveHeader()
+            else if (_activeNavIndex == 1)
+              _buildStandardAppBar('Vendors Directory', '${_vendors.length} Total Registered Vendors')
+            else if (_activeNavIndex == 2)
+              _buildStandardAppBar('Candidates Roster', '${_candidates.length} Total Enrolled Candidates')
+            else
+              _buildStandardAppBar('QC Approved Portal', '${_qcSubmissions.length} Submissions in QC System'),
             
             // Dynamic Body Screens
             Expanded(
@@ -508,7 +515,62 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
-  // 1. TOP EXECUTIVE HEADER MATCHING DESIGN
+  // Clean Standard AppBar for Vendors, Candidates, and QC Approved tabs
+  Widget _buildStandardAppBar(String title, String subtitle) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF0B192C),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 10, 16, 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+                onPressed: _showSystemDrawerDialog,
+              ),
+              const SizedBox(width: 4),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
+                onPressed: _loadDashboardData,
+                tooltip: 'Refresh Data',
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout_rounded, color: Color(0xFFFCA5A5), size: 22),
+                onPressed: _handleLogout,
+                tooltip: 'Logout',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 1. TOP EXECUTIVE HEADER MATCHING DESIGN (ONLY FOR DASHBOARD TAB 0)
   Widget _buildTopExecutiveHeader() {
     return Container(
       decoration: const BoxDecoration(
