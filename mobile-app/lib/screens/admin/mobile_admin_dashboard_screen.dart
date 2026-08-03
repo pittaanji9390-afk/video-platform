@@ -1398,6 +1398,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           Text('Candidate: ${item['candidateName']} • Vendor: ${item['vendor']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
           const SizedBox(height: 4),
           Text('Duration: ${item['duration']} • ID: ${item['id']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+          if (item['assigned_qc'] != null && item['assigned_qc'].toString().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('Assigned to: ${item['assigned_qc']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+          ],
           const SizedBox(height: 12),
 
           Row(
@@ -1418,8 +1422,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _showAssignQCDialog(item['id']),
-                  icon: const Icon(Icons.assignment_ind_outlined, size: 14, color: Color(0xFF7C3AED)),
-                  label: const Text('Assign', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.assignment_ind_rounded, size: 14, color: Color(0xFF7C3AED)),
+                  label: const Text('Assign QC', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFDDD6FE)),
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1882,55 +1886,75 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   }
 
   void _showAssignQCDialog(String videoId) {
-    String selectedReviewer = _qcMembers.isNotEmpty ? '${_qcMembers.first['name']} (${_qcMembers.first['email']})' : 'QC Evaluator (qc@demo.com)';
+    List<Map<String, dynamic>> availableMembers = List.from(_qcMembers);
+    if (availableMembers.isEmpty) {
+      availableMembers = [
+        {'name': 'QC Team Lead', 'email': 'qcteam@gmail.com'},
+        {'name': 'QC Evaluator', 'email': 'qc@gmail.com'},
+      ];
+    }
+    String selectedReviewer = '${availableMembers.first['name']} (${availableMembers.first['email']})';
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Assign QC Reviewer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Select a qualified QC Team reviewer for video $videoId:', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              value: selectedReviewer,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Assign QC Reviewer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Select a qualified QC Team reviewer for video $videoId:', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: selectedReviewer,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                items: availableMembers.map((m) {
+                  final label = '${m['name']} (${m['email']})';
+                  return DropdownMenuItem<String>(
+                    value: label,
+                    child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A))),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setModalState(() => selectedReviewer = val);
+                  }
+                },
               ),
-              items: _qcMembers.map((m) {
-                final label = '${m['name']} (${m['email']})';
-                return DropdownMenuItem<String>(
-                  value: label,
-                  child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  final idx = _qcSubmissions.indexWhere((v) => v['id'] == videoId || v['raw_id'] == videoId);
+                  if (idx != -1) {
+                    _qcSubmissions[idx]['assigned_qc'] = selectedReviewer;
+                    _qcSubmissions[idx]['status'] = 'In Review';
+                  }
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Video $videoId assigned to $selectedReviewer!'),
+                    backgroundColor: const Color(0xFF7C3AED),
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) selectedReviewer = val;
               },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+              child: const Text('Assign Reviewer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Video $videoId assigned to $selectedReviewer!'),
-                  backgroundColor: const Color(0xFF7C3AED),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
-            child: const Text('Assign Reviewer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
