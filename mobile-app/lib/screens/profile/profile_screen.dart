@@ -99,10 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
         backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimaryLight,
-        elevation: 0,
+        elevation: 0.5,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -112,23 +111,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // Dynamic Avatar & Name Header
               CircleAvatar(
                 radius: 46,
-                backgroundColor: AppColors.primary,
+                backgroundColor: const Color(0xFF2563EB),
                 child: Text(_initials, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(_candidateName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text(_candidateName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: AppColors.success.withAlpha(20), borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(10)),
                     child: const Row(
                       children: [
-                        Icon(Icons.verified_rounded, size: 14, color: AppColors.success),
+                        Icon(Icons.verified_rounded, size: 14, color: Color(0xFF16A34A)),
                         SizedBox(width: 4),
-                        Text('Verified', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.bold)),
+                        Text('Verified', style: TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -139,13 +138,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // Dynamic Profile Info List (Candidate ID, Vendor ID, Email)
               Card(
                 elevation: 0,
+                color: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
                 child: Column(
                   children: [
                     _buildInfoRow('Candidate ID', _candidateId),
-                    const Divider(height: 1),
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     _buildInfoRow('Vendor ID', _vendorId),
-                    const Divider(height: 1),
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     _buildInfoRow('Email', _candidateEmail),
                   ],
                 ),
@@ -155,14 +155,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // QR Code Card
               Card(
                 elevation: 0,
+                color: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                child: const Padding(
+                  padding: EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      const Icon(Icons.qr_code_2_rounded, size: 100, color: AppColors.primary),
-                      const SizedBox(height: 8),
-                      const Text('Scan Candidate Verification QR Code', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Icon(Icons.qr_code_2_rounded, size: 100, color: Color(0xFF2563EB)),
+                      SizedBox(height: 8),
+                      Text('Scan Candidate Verification QR Code', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
@@ -179,11 +180,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.pushReplacementNamed(context, AppRoutes.login);
                     }
                   },
-                  icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-                  label: const Text('Sign Out', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+                  label: const Text('Sign Out', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: AppColors.error),
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -202,8 +203,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 14)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimaryLight)),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 14, fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
         ],
       ),
     );
