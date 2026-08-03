@@ -307,68 +307,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                 ),
-                const SizedBox(height: 16),
-
-                // Quick 1-Tap Login Buttons for Instant Client Evaluation
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Quick Demo Portals',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : () => _handleLogin('admin@demo.com', 'admin123'),
-                              icon: const Icon(Icons.shield_outlined, size: 14, color: Colors.white),
-                              label: const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E3A8A),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : () => _handleLogin('vendor@demo.com', 'vendor123'),
-                              icon: const Icon(Icons.storefront_outlined, size: 14, color: Colors.white),
-                              label: const Text('Vendor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF059669),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : () => _handleLogin('qc@demo.com', 'qc123456'),
-                              icon: const Icon(Icons.verified_user_outlined, size: 14, color: Colors.white),
-                              label: const Text('QC Team', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF7C3AED),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: 24),
 
                 // Don't Have An Account? Candidate Sign Up Redirect Link
