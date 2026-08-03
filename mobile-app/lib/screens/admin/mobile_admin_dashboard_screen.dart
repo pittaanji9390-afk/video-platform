@@ -318,6 +318,11 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.notifications_active_outlined, color: Colors.white70),
+            onPressed: _showActivityLogsDialog,
+            tooltip: 'System Activity Logs',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
             onPressed: _loadDashboardData,
             tooltip: 'Refresh Data',
@@ -775,22 +780,37 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _updateVideoStatus(item['id'], 'Rejected'),
-                  icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
-                  label: const Text('Reject', style: TextStyle(color: Color(0xFFDC2626), fontSize: 12, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
+                  label: const Text('Reject', style: TextStyle(color: Color(0xFFDC2626), fontSize: 11, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showAssignQCDialog(item['id']),
+                  icon: const Icon(Icons.assignment_ind_outlined, size: 14, color: Color(0xFF7C3AED)),
+                  label: const Text('Assign', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFDDD6FE)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () => _updateVideoStatus(item['id'], 'Approved'),
-                  icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                  label: const Text('Approve', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                  label: const Text('Approve', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
@@ -872,5 +892,140 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         ),
       ),
     );
+  }
+
+  void _showActivityLogsDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.notifications_active_rounded, color: Color(0xFF2563EB), size: 22),
+            SizedBox(width: 8),
+            Text('System Activity Logs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildLogTile('New Candidate Registered', 'Alex Johnson enrolled under Acme Video Solutions', '10 mins ago', Icons.person_add_rounded, const Color(0xFF10B981)),
+              _buildLogTile('QC Submission Reviewed', 'Speech assessment video approved by QC Team', '25 mins ago', Icons.verified_rounded, const Color(0xFF8B5CF6)),
+              _buildLogTile('Vendor Account Provisioned', 'Global Media Partners API credentials generated', '1 hour ago', Icons.storefront_rounded, const Color(0xFF3B82F6)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogTile(String title, String desc, String time, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                const SizedBox(height: 2),
+                Text(desc, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                const SizedBox(height: 4),
+                Text(time, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignQCDialog(String videoId) {
+    String selectedReviewer = 'QC Evaluator (qc@demo.com)';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Assign QC Reviewer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Select a qualified QC Team reviewer for video $videoId:', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              value: selectedReviewer,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'QC Evaluator (qc@demo.com)', child: Text('QC Evaluator (qc@demo.com)')),
+                DropdownMenuItem(value: 'Senior Reviewer A', child: Text('Senior Reviewer A')),
+                DropdownMenuItem(value: 'Quality Lead B', child: Text('Quality Lead B')),
+              ],
+              onChanged: (val) {
+                if (val != null) selectedReviewer = val;
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Video $videoId assigned to $selectedReviewer!'),
+                  backgroundColor: const Color(0xFF7C3AED),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+            child: const Text('Assign Reviewer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleVendorStatus(String vendorId) {
+    setState(() {
+      final index = _vendors.indexWhere((v) => v['id'] == vendorId || v['vendor_code'] == vendorId);
+      if (index != -1) {
+        final current = _vendors[index]['status'] ?? 'Active';
+        final updated = current == 'Active' ? 'Inactive' : 'Active';
+        _vendors[index]['status'] = updated;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Vendor ${_vendors[index]['name']} is now $updated!'),
+            backgroundColor: updated == 'Active' ? const Color(0xFF059669) : const Color(0xFFDC2626),
+          ),
+        );
+      }
+    });
   }
 }
