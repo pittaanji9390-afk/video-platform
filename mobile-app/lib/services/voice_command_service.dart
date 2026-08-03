@@ -83,44 +83,47 @@ class VoiceCommandService {
   void _processTranscript(String text) {
     if (text.isEmpty) return;
 
+    debugPrint('🎤 Recognized voice input: "$text"');
+
     // Debounce check
     final now = DateTime.now();
     if (_lastCommandTime != null && now.difference(_lastCommandTime!) < _commandCooldown) {
       return;
     }
 
-    // Strict matching: only exact phrases or single words
-    // Avoid false positives from words like "restart", "stopwatch", "starting"
     final VoiceCommand? command = _matchCommand(text);
     if (command != null) {
       _lastCommandTime = now;
+      debugPrint('⚡ Voice Command Triggered: $command');
       _onCommandDetected?.call(command);
     }
   }
 
-  /// Match voice input against known commands using strict rules
+  /// Match voice input against known commands using flexible variations
   VoiceCommand? _matchCommand(String text) {
     final cleaned = text.trim().toLowerCase();
+    if (cleaned.isEmpty) return null;
 
-    // Exact single-word matches
-    if (cleaned == 'start' || cleaned == 'go' || cleaned == 'begin') {
-      return VoiceCommand.start;
-    }
-    if (cleaned == 'stop' || cleaned == 'halt' || cleaned == 'end') {
+    // STOP COMMAND VARIATIONS (High priority so "stop", "stop recording", "stop video", "finish" are matched immediately)
+    if (cleaned.contains('stop') ||
+        cleaned.contains('halt') ||
+        cleaned.contains('finish') ||
+        cleaned.contains('end') ||
+        cleaned.contains('done') ||
+        cleaned.contains('cancel') ||
+        cleaned.contains('quit')) {
       return VoiceCommand.stop;
     }
 
-    // Phrase matches — must be the full utterance or start of it
-    if (cleaned == 'start recording' || cleaned.startsWith('start recording') ||
-        cleaned == 'start video' || cleaned.startsWith('start video')) {
+    // START COMMAND VARIATIONS
+    if (cleaned.contains('start') ||
+        cleaned.contains('begin') ||
+        cleaned.contains('go') ||
+        cleaned.contains('record') ||
+        cleaned.contains('capture')) {
       return VoiceCommand.start;
     }
-    if (cleaned == 'stop recording' || cleaned.startsWith('stop recording') ||
-        cleaned == 'stop video' || cleaned.startsWith('stop video')) {
-      return VoiceCommand.stop;
-    }
 
-    // Reject partial matches like "restart", "stopwatch", "starting", "stopping"
     return null;
   }
 
@@ -129,16 +132,18 @@ class VoiceCommandService {
     _isListening = true;
 
     try {
+      if (_speechToText.isListening) return;
+
       _speechToText.listen(
         onResult: (result) {
           final recognizedWords = result.recognizedWords.trim().toLowerCase();
           _processTranscript(recognizedWords);
         },
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
+        listenFor: const Duration(seconds: 60),
+        pauseFor: const Duration(seconds: 5),
         partialResults: true,
         cancelOnError: false,
-        listenMode: ListenMode.confirmation,
+        listenMode: ListenMode.deviceDefault,
       ).catchError((err) {
         debugPrint('Speech listen catchError: $err');
       });
@@ -150,11 +155,19 @@ class VoiceCommandService {
 
   void _restartListeningIfNeeded() {
     if (_isListening && !kIsWeb) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (_isListening) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (_isListening && !_speechToText.isListening) {
           _startListeningLoop();
         }
       });
+    }
+  }
+
+  /// Ensure speech listening is active (re-triggers listener if stopped during video recording)
+  void ensureListening() {
+    _isListening = true;
+    if (!kIsWeb && !_speechToText.isListening) {
+      _startListeningLoop();
     }
   }
 

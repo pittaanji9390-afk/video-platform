@@ -216,6 +216,8 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
         _recordedFile = null;
       });
       _startTimer();
+      // Keep voice command listener active for Stop Recording command during video recording
+      VoiceCommandService.instance.ensureListening();
     }
   }
 
