@@ -241,8 +241,8 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                     if (val == null || val.trim().isEmpty) {
                       return 'Please enter a password';
                     }
-                    if (val.trim().length < 4) {
-                      return 'Password must be at least 4 characters';
+                    if (val.trim().length < 6) {
+                      return 'Password must be at least 6 characters';
                     }
                     return null;
                   },

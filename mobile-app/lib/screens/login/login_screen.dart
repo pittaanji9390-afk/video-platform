@@ -324,7 +324,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : () => _handleLogin('admin@demo.com', 'admin'),
+                              onPressed: _isLoading ? null : () => _handleLogin('admin@demo.com', 'admin123'),
                               icon: const Icon(Icons.shield_outlined, size: 14, color: Colors.white),
                               label: const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
@@ -337,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : () => _handleLogin('vendor@demo.com', 'vendor'),
+                              onPressed: _isLoading ? null : () => _handleLogin('vendor@demo.com', 'vendor123'),
                               icon: const Icon(Icons.storefront_outlined, size: 14, color: Colors.white),
                               label: const Text('Vendor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
@@ -350,7 +350,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : () => _handleLogin('qc@demo.com', 'qc'),
+                              onPressed: _isLoading ? null : () => _handleLogin('qc@demo.com', 'qc123456'),
                               icon: const Icon(Icons.verified_user_outlined, size: 14, color: Colors.white),
                               label: const Text('QC Team', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
