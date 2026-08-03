@@ -535,8 +535,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 _buildImageStyleMetricCard(
                   'Total Vendors',
                   '$_totalVendorsCount',
-                  'Active',
-                  const Color(0xFF10B981),
+                  'Registered',
+                  const Color(0xFF2563EB),
                   Icons.group_work_outlined,
                   const Color(0xFFDBEAFE),
                   const Color(0xFF2563EB),
