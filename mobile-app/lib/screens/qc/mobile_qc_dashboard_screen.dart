@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../utils/web_helper.dart' as web;
 import '../../core/constants/api_constants.dart';
-import '../../core/theme/app_colors.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/powered_by_footer.dart';
@@ -579,6 +578,8 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
         ),
       ],
     );
+  }
+
   Future<void> _showQCProfileModal() async {
     final session = await AuthService.restoreSession();
     final name = session?['name'] ?? session?['username'] ?? 'QC Evaluator';
