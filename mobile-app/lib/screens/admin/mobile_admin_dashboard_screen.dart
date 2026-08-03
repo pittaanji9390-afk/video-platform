@@ -730,23 +730,34 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                     SizedBox(
                       height: 140,
                       child: CustomPaint(
-                        painter: _LineChartPainter(),
+                        painter: _LineChartPainter(isWeekly: _selectedTimeframe == 'This Week'),
                         child: Container(),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text('Mon', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                        Text('Tue', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                        Text('Wed', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                        Text('Thu', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                        Text('Fri', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                        Text('Sat', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                        Text('Sun', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                      ],
-                    ),
+                    if (_selectedTimeframe == 'This Week')
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text('Mon', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Tue', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Wed', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Thu', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Fri', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Sat', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Sun', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                        ],
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text('Wk 1', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Wk 2', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Wk 3', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                          Text('Wk 4', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -2035,6 +2046,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
 // Custom Painter for Smooth Trend Line Chart
 class _LineChartPainter extends CustomPainter {
+  final bool isWeekly;
+  _LineChartPainter({this.isWeekly = true});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -2051,15 +2065,22 @@ class _LineChartPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
 
-    final points = [
-      Offset(0, size.height * 0.85),
-      Offset(size.width * 0.16, size.height * 0.65),
-      Offset(size.width * 0.33, size.height * 0.25),
-      Offset(size.width * 0.50, size.height * 0.50),
-      Offset(size.width * 0.66, size.height * 0.25),
-      Offset(size.width * 0.83, size.height * 0.40),
-      Offset(size.width, size.height * 0.10),
-    ];
+    final points = isWeekly
+        ? [
+            Offset(0, size.height * 0.85),
+            Offset(size.width * 0.16, size.height * 0.65),
+            Offset(size.width * 0.33, size.height * 0.25),
+            Offset(size.width * 0.50, size.height * 0.50),
+            Offset(size.width * 0.66, size.height * 0.25),
+            Offset(size.width * 0.83, size.height * 0.40),
+            Offset(size.width, size.height * 0.10),
+          ]
+        : [
+            Offset(0, size.height * 0.75),
+            Offset(size.width * 0.33, size.height * 0.45),
+            Offset(size.width * 0.66, size.height * 0.20),
+            Offset(size.width, size.height * 0.12),
+          ];
 
     final path = Path();
     path.moveTo(points[0].dx, points[0].dy);
@@ -2075,7 +2096,6 @@ class _LineChartPainter extends CustomPainter {
     canvas.drawPath(fillPath, fillPaint);
     canvas.drawPath(path, paint);
 
-    // Draw dots at points
     final dotPaint = Paint()..color = const Color(0xFF2563EB);
     final innerDotPaint = Paint()..color = Colors.white;
 
@@ -2086,5 +2106,5 @@ class _LineChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _LineChartPainter oldDelegate) => oldDelegate.isWeekly != isWeekly;
 }
