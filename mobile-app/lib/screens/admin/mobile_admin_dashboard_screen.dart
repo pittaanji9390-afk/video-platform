@@ -465,8 +465,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
-                onPressed: _showSystemDrawerDialog,
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                onPressed: () => setState(() => _activeNavIndex = 0),
+                tooltip: 'Back to Dashboard',
               ),
               const SizedBox(width: 4),
               Column(
