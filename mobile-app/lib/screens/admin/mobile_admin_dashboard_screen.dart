@@ -25,7 +25,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   String _candidateSearchQuery = '';
   String _selectedTimeframe = 'This Week';
 
+  void _closeDrawerIfOpen() {
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      _scaffoldKey.currentState?.closeDrawer();
+    }
+  }
+
   void _navigateToTab(int index) {
+    _closeDrawerIfOpen();
     if (_activeNavIndex != index) {
       _navHistory.add(_activeNavIndex);
       setState(() {
@@ -569,7 +576,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 15),
               ),
               onTap: () {
-                Navigator.pop(context); // close drawer
+                _closeDrawerIfOpen();
                 _handleLogout();
               },
             ),
@@ -586,30 +593,30 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     required int index,
   }) {
     final bool isSelected = _activeNavIndex == index;
-    return Container(
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        leading: Icon(
-          icon,
-          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569),
-          size: 22,
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF1E293B),
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            fontSize: 14.5,
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          leading: Icon(
+            icon,
+            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569),
+            size: 22,
           ),
+          title: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF1E293B),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              fontSize: 14.5,
+            ),
+          ),
+          onTap: () => _navigateToTab(index),
         ),
-        onTap: () {
-          Navigator.pop(context); // close drawer
-          _navigateToTab(index);
-        },
       ),
     );
   }
