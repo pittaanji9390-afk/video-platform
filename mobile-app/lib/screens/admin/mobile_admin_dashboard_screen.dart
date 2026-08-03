@@ -17,11 +17,34 @@ class MobileAdminDashboardScreen extends StatefulWidget {
 
 class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen> {
   int _activeNavIndex = 0;
+  final List<int> _navHistory = [];
   bool _isLoading = false;
   bool _isFetching = false;
   String _vendorSearchQuery = '';
   String _candidateSearchQuery = '';
   String _selectedTimeframe = 'This Week';
+
+  void _navigateToTab(int index) {
+    if (_activeNavIndex != index) {
+      _navHistory.add(_activeNavIndex);
+      setState(() {
+        _activeNavIndex = index;
+      });
+    }
+  }
+
+  void _goBackToPreviousTab() {
+    if (_navHistory.isNotEmpty) {
+      final prevIndex = _navHistory.removeLast();
+      setState(() {
+        _activeNavIndex = prevIndex;
+      });
+    } else {
+      setState(() {
+        _activeNavIndex = 0;
+      });
+    }
+  }
 
   // Dynamic Dashboard Stats (populated dynamically from live API database)
   int _totalVendorsCount = 0;
@@ -426,7 +449,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             const PoweredByFooter(),
             BottomNavigationBar(
               currentIndex: _activeNavIndex.clamp(0, 4),
-              onTap: (idx) => setState(() => _activeNavIndex = idx),
+              onTap: (idx) => _navigateToTab(idx),
               backgroundColor: Colors.white,
               selectedItemColor: const Color(0xFF1E3A8A),
               unselectedItemColor: const Color(0xFF94A3B8),
@@ -466,8 +489,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
-                onPressed: () => setState(() => _activeNavIndex = 0),
-                tooltip: 'Back to Dashboard',
+                onPressed: _goBackToPreviousTab,
+                tooltip: 'Return to Previous Screen',
               ),
               const SizedBox(width: 4),
               Column(
