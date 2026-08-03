@@ -583,10 +583,6 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                                 ),
                             ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.logout_rounded, color: Color(0xFFFCA5A5)),
-                            onPressed: _handleLogout,
-                          ),
                         ],
                       ),
                     ],
