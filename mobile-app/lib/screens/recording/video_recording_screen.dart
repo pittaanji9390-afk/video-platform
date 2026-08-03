@@ -158,6 +158,8 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: const [
@@ -284,6 +286,8 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: const [
@@ -300,7 +304,7 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
           children: [
             const Text(
               'Your video clip was captured. Would you like to upload it now to the server or keep it in drafts?',
-              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              style: TextStyle(fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 16),
             Container(
