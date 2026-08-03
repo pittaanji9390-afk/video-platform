@@ -161,6 +161,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  void _clearAll() {
+    setState(() {
+      _notifications.clear();
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notifications cleared'),
+          backgroundColor: Color(0xFF64748B),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -176,7 +191,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           TextButton(
             onPressed: _markAllRead,
-            child: const Text('Mark All Read', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+            child: const Text('Mark All Read', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          TextButton(
+            onPressed: _clearAll,
+            child: const Text('Clear All', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ],
       ),

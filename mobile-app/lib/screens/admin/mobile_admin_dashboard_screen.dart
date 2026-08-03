@@ -42,6 +42,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   final List<Map<String, dynamic>> _qcSubmissions = [];
 
   // Recent Activities (Dynamic API)
+  int _unreadNotificationsCount = 3;
   final List<Map<String, dynamic>> _recentActivities = [];
 
   // Modal Controllers
@@ -480,21 +481,22 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                         icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 26),
                         onPressed: _showActivityLogsDialog,
                       ),
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '3',
-                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      if (_unreadNotificationsCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '$_unreadNotificationsCount',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   IconButton(
@@ -1503,28 +1505,91 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   void _showActivityLogsDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
-            Icon(Icons.notifications_active_rounded, color: Color(0xFF2563EB), size: 22),
-            SizedBox(width: 8),
-            Text('Recent System Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: _recentActivities.map((act) => _buildLogTile(act['title'], act['subtitle'], act['time'], act['icon'], act['color'])).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: const [
+                Icon(Icons.notifications_active_rounded, color: Color(0xFF2563EB), size: 22),
+                SizedBox(width: 8),
+                Text('Recent System Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _recentActivities.isEmpty
+                      ? const [
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: Text('No recent system activity logs.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                            ),
+                          ),
+                        ]
+                      : _recentActivities.map((act) => _buildLogTile(act['title'], act['subtitle'], act['time'], act['icon'], act['color'])).toList(),
+                ),
+              ),
+            ),
+            actions: [
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 4,
+                children: [
+                  TextButton.icon(
+                    onPressed: _unreadNotificationsCount == 0
+                        ? null
+                        : () {
+                            setState(() {
+                              _unreadNotificationsCount = 0;
+                            });
+                            setDialogState(() {});
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('All system notifications marked as read!'),
+                                backgroundColor: Color(0xFF2563EB),
+                                behavior: SnackBarBehavior.floating,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                    icon: const Icon(Icons.done_all_rounded, size: 16, color: Color(0xFF2563EB)),
+                    label: const Text('Mark as Read', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  TextButton.icon(
+                    onPressed: _recentActivities.isEmpty && _unreadNotificationsCount == 0
+                        ? null
+                        : () {
+                            setState(() {
+                              _recentActivities.clear();
+                              _unreadNotificationsCount = 0;
+                            });
+                            setDialogState(() {});
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Activity logs cleared.'),
+                                backgroundColor: Color(0xFF64748B),
+                                behavior: SnackBarBehavior.floating,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                    icon: const Icon(Icons.delete_sweep_rounded, size: 16, color: Color(0xFFEF4444)),
+                    label: const Text('Clear All', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
