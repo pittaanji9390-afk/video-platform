@@ -499,7 +499,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Dashboard'),
                 BottomNavigationBarItem(icon: Icon(Icons.storefront_rounded), label: 'Vendors'),
                 BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Candidates'),
-                BottomNavigationBarItem(icon: Icon(Icons.verified_user_rounded), label: 'QC Queue'),
+                BottomNavigationBarItem(icon: Icon(Icons.verified_rounded), label: 'QC Approved'),
               ],
             ),
           ],
@@ -1273,8 +1273,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('QC Review Queue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                        Text('${_qcSubmissions.length} Submissions Awaiting Review', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                        const Text('QC Approved & Submissions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                        Text('${_qcSubmissions.length} Submissions in QC System', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                       ],
                     ),
                   ),
