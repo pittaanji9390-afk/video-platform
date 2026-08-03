@@ -421,22 +421,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           ),
           Row(
             children: [
-              if (_activeNavIndex == 3)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6.0),
-                  child: ElevatedButton.icon(
-                    onPressed: _showAddQCMemberDialog,
-                    icon: const Icon(Icons.person_add_rounded, size: 16, color: Colors.white),
-                    label: const Text('+ Add QC', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7C3AED),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                ),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
                 onPressed: _loadDashboardData,
@@ -1216,32 +1200,52 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _showAddQCMemberDialog,
-                    icon: const Icon(Icons.person_add_rounded, size: 16, color: Colors.white),
-                    label: const Text('+ Create QC Member', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7C3AED),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              // Executive QC Banner Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x1A000000), blurRadius: 10, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('QC Management', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                            SizedBox(height: 2),
+                            Text('Create & manage live QC team members', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                          ],
+                        ),
+                        Icon(Icons.fact_check_rounded, color: Color(0xFF3B82F6), size: 28),
+                      ],
                     ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
-                    icon: const Icon(Icons.download_rounded, size: 16, color: Color(0xFF7C3AED)),
-                    label: const Text('Export Queue CSV', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFDDD6FE)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _showAddQCMemberDialog,
+                        icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                        label: const Text('+ Add QC', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 3,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               if (pendingItems.isEmpty)
                 Container(
