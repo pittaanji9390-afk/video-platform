@@ -918,7 +918,6 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
                 return Column(
                   children: filtered.map((c) {
-                    final isActive = c['status'] == 'Active';
                     final name = (c['name'] ?? 'Candidate').toString();
                     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'C';
 
@@ -947,21 +946,12 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                               children: [
                                 Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
                                 const SizedBox(height: 2),
-                                Text('Vendor: ${c['vendor']} • Phone: ${c['phone']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                                if (c['email'] != null && c['email'].toString().isNotEmpty)
+                                Text('Vendor: ${c['vendor']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                if (c['email'] != null && c['email'].toString().isNotEmpty) ...[
+                                  const SizedBox(height: 2),
                                   Text('Email: ${c['email']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                                ],
                               ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: (isActive ? const Color(0xFF10B981) : Colors.grey).withOpacity( 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              c['status'] ?? 'Active',
-                              style: TextStyle(color: isActive ? const Color(0xFF059669) : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
