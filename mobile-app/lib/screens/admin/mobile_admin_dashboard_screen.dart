@@ -1204,8 +1204,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(c['name'] ?? 'Candidate Name', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
-                const SizedBox(height: 2),
-                Text('Vendor: ${c['vendor']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                 if (c['email'] != null && c['email'].toString().isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text('Email: ${c['email']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
