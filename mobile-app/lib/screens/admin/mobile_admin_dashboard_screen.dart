@@ -1465,6 +1465,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: const [
@@ -1478,19 +1480,21 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Required Vendor Information', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                const Text('Required Vendor Information', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _vendorNameCtrl,
                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     labelText: 'Company Name *',
+                    labelStyle: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w500),
                     hintText: 'e.g. Acme Vendor Solutions',
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.business_rounded, color: Color(0xFF2563EB)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1499,12 +1503,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     labelText: 'Contact Person Name',
+                    labelStyle: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w500),
                     hintText: 'e.g. John Doe',
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF2563EB)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1514,12 +1520,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     labelText: 'Login Email Address *',
+                    labelStyle: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w500),
                     hintText: 'e.g. vendor@company.com',
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF2563EB)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1529,12 +1537,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     labelText: 'Phone Number',
+                    labelStyle: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w500),
                     hintText: 'e.g. +91 98765 43210',
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF2563EB)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1544,16 +1554,18 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     labelText: 'Login Password *',
+                    labelStyle: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w500),
                     hintText: 'Enter vendor password',
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF2563EB)),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureVendorPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF94A3B8)),
+                      icon: Icon(_obscureVendorPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF64748B)),
                       onPressed: () => setDialogState(() => _obscureVendorPassword = !_obscureVendorPassword),
                     ),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                   ),
                 ),
               ],
@@ -1656,31 +1668,46 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: const [
               Icon(Icons.person_add_rounded, color: Color(0xFF7C3AED), size: 22),
               SizedBox(width: 8),
-              Text('Create QC Member', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text('Create QC Member', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A))),
             ],
           ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: _qcNameCtrl, decoration: const InputDecoration(labelText: 'Full Name')),
-                TextField(controller: _qcEmailCtrl, decoration: const InputDecoration(labelText: 'Email Address (e.g. qc@demo.com)')),
-                TextField(controller: _qcPhoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number')),
+                TextField(
+                  controller: _qcNameCtrl,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
+                  decoration: const InputDecoration(labelText: 'Full Name', labelStyle: TextStyle(color: Color(0xFF475569))),
+                ),
+                TextField(
+                  controller: _qcEmailCtrl,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
+                  decoration: const InputDecoration(labelText: 'Email Address (e.g. qc@demo.com)', labelStyle: TextStyle(color: Color(0xFF475569))),
+                ),
+                TextField(
+                  controller: _qcPhoneCtrl,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
+                  decoration: const InputDecoration(labelText: 'Phone Number', labelStyle: TextStyle(color: Color(0xFF475569))),
+                ),
                 TextField(
                   controller: _qcPasswordCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password (min 6 chars)'),
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
+                  decoration: const InputDecoration(labelText: 'Password (min 6 chars)', labelStyle: TextStyle(color: Color(0xFF475569))),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B)))),
             ElevatedButton(
               onPressed: () async {
                 final name = _qcNameCtrl.text.trim();
@@ -1737,12 +1764,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: const [
                 Icon(Icons.notifications_active_rounded, color: Color(0xFF2563EB), size: 22),
                 SizedBox(width: 8),
-                Text('Recent System Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('Recent System Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
               ],
             ),
             content: SizedBox(
@@ -1837,7 +1866,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         children: [
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 10),
@@ -1863,8 +1892,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Assign QC Reviewer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text('Assign QC Reviewer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
