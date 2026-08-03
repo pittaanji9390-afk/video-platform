@@ -15,7 +15,7 @@ class VoiceCommandService {
   bool _isListening = false;
   bool get isListening => _isListening;
 
-  // Debounce: prevent rapid re-triggering of same command
+  VoiceCommand? _lastCommand;
   DateTime? _lastCommandTime;
   static const Duration _commandCooldown = Duration(seconds: 2);
 
@@ -85,15 +85,18 @@ class VoiceCommandService {
 
     debugPrint('🎤 Recognized voice input: "$text"');
 
-    // Debounce check
-    final now = DateTime.now();
-    if (_lastCommandTime != null && now.difference(_lastCommandTime!) < _commandCooldown) {
-      return;
-    }
-
     final VoiceCommand? command = _matchCommand(text);
     if (command != null) {
+      final now = DateTime.now();
+      // Debounce check ONLY for identical repeated commands, NEVER block switching between start <-> stop!
+      if (_lastCommandTime != null && 
+          _lastCommand == command && 
+          now.difference(_lastCommandTime!) < _commandCooldown) {
+        return;
+      }
+
       _lastCommandTime = now;
+      _lastCommand = command;
       debugPrint('⚡ Voice Command Triggered: $command');
       _onCommandDetected?.call(command);
     }
@@ -104,13 +107,15 @@ class VoiceCommandService {
     final cleaned = text.trim().toLowerCase();
     if (cleaned.isEmpty) return null;
 
-    // STOP COMMAND VARIATIONS (High priority so "stop", "stop recording", "stop video", "finish" are matched immediately)
+    // STOP COMMAND VARIATIONS (Highest priority: catch any phrase containing stop/end/finish/done/halt/cancel/pause)
     if (cleaned.contains('stop') ||
         cleaned.contains('halt') ||
         cleaned.contains('finish') ||
         cleaned.contains('end') ||
         cleaned.contains('done') ||
         cleaned.contains('cancel') ||
+        cleaned.contains('pause') ||
+        cleaned.contains('cut') ||
         cleaned.contains('quit')) {
       return VoiceCommand.stop;
     }
@@ -138,9 +143,14 @@ class VoiceCommandService {
         onResult: (result) {
           final recognizedWords = result.recognizedWords.trim().toLowerCase();
           _processTranscript(recognizedWords);
+
+          // Check alternate hypotheses for instant command interception
+          for (var alt in result.alternates) {
+            _processTranscript(alt.recognizedWords.trim().toLowerCase());
+          }
         },
-        listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 5),
+        listenFor: const Duration(hours: 1),
+        pauseFor: const Duration(seconds: 10),
         partialResults: true,
         cancelOnError: false,
         listenMode: ListenMode.deviceDefault,
