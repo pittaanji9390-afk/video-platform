@@ -68,69 +68,27 @@ class AuthService extends ChangeNotifier {
         return {'success': true, 'role': role, 'data': envelope};
       }
 
-      // Server reachable but credentials failed — fallback gracefully for admin, qc, vendor identifiers/passwords
-      final fallbackRole = _determineRole(cleanIdentifier);
-      if (cleanIdentifier.contains('admin') || password == 'admin' || cleanIdentifier == 'admin' ||
-          cleanIdentifier.contains('qc') || password == 'qc' || cleanIdentifier == 'qc' ||
-          cleanIdentifier.contains('vendor') || password == 'vendor' || cleanIdentifier == 'vendor') {
-        
-        String demoName = 'User';
-        if (fallbackRole == 'admin') demoName = 'Admin User';
-        else if (fallbackRole == 'qc') demoName = 'QC Evaluator';
-        else if (fallbackRole == 'vendor') demoName = 'Vendor User';
-
-        await saveSession(
-          token: 'demo_token_${DateTime.now().millisecondsSinceEpoch}',
-          refreshToken: 'demo_refresh_token',
-          role: fallbackRole,
-          name: demoName,
-          email: cleanIdentifier.isNotEmpty ? cleanIdentifier : '$fallbackRole@demo.com',
-          userId: '${fallbackRole}_demo_001',
-          vendorId: 'vendor_demo_001',
-          isDemoMode: true,
-        );
-        return {'success': true, 'role': fallbackRole, 'isDemo': true};
-      }
-
+      // 2. Database validation failed (HTTP 401/403/etc.)
       try {
         final err = jsonDecode(response.body);
         return {
           'success': false,
-          'message': err['message'] ?? err['error'] ?? 'Invalid credentials (${response.statusCode})',
+          'message': err['message'] ?? err['error'] ?? 'Invalid credentials in database (${response.statusCode})',
         };
       } catch (_) {
         return {
           'success': false,
-          'message': 'Login failed (${response.statusCode}). Please check credentials.',
+          'message': 'Login failed (${response.statusCode}). Please check your database credentials.',
         };
       }
     } catch (e) {
-      debugPrint('Live API login exception: $e');
+      debugPrint('Database auth exception: $e');
     }
 
-    // Server unreachable — Demo Mode Fallback for offline/client evaluation
-    final demoRole = _determineRole(cleanIdentifier);
-    String demoName = 'Candidate User';
-    if (cleanIdentifier.contains('admin')) demoName = 'Admin User';
-    else if (cleanIdentifier.contains('vendor')) demoName = 'Vendor User';
-    else if (cleanIdentifier.contains('qc')) demoName = 'QC Evaluator';
-
-    await saveSession(
-      token: 'demo_token_${DateTime.now().millisecondsSinceEpoch}',
-      refreshToken: 'demo_refresh_token',
-      role: demoRole,
-      name: demoName,
-      email: cleanIdentifier,
-      userId: 'demo_user_${cleanIdentifier.hashCode.abs()}',
-      vendorId: 'demo_vendor_id',
-      isDemoMode: true,
-    );
-
+    // 3. Backend server unreachable
     return {
-      'success': true,
-      'role': demoRole,
-      'isDemo': true,
-      'message': 'Server unreachable — running in Demo Mode',
+      'success': false,
+      'message': 'Unable to connect to database server. Please ensure backend service is active.',
     };
   }
 
