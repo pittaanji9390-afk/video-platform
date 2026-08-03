@@ -1040,6 +1040,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               // Search Bar
               TextField(
                 onChanged: (val) => setState(() => _vendorSearchQuery = val),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   hintText: 'Search vendors by name, code, contact...',
                   hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
@@ -1049,6 +1050,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1130,6 +1132,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               // Search Bar
               TextField(
                 onChanged: (val) => setState(() => _candidateSearchQuery = val),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   hintText: 'Search candidates by name, email, vendor...',
                   hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
@@ -1139,6 +1142,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
                 ),
               ),
               const SizedBox(height: 16),

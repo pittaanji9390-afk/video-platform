@@ -849,6 +849,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                   _searchCandidateQuery = val;
                 });
               },
+              style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
               decoration: InputDecoration(
                 hintText: 'Search candidates by name, email, phone, vendor...',
                 prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF2563EB)),
