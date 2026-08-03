@@ -83,14 +83,28 @@ async function seedNeonDatabase() {
       SET password_hash = EXCLUDED.password_hash, is_active = TRUE;
     `, [candidatePasswordHash]);
 
-    // 4. Seed QC Team Table (qcteam@gmail.com / qcteam123)
+    // 4. Seed QC Team Table (qcteam@gmail.com / qcteam123 & qc@gmail.com / qc123456)
     console.log('4. Seeding QC Team (qcteam@gmail.com / qcteam123)...');
+    await db.query(`DELETE FROM reviewer_activity WHERE reviewer_email IN ('qcteam@gmail.com', 'qc@gmail.com');`).catch(() => {});
     await db.query(`
       INSERT INTO reviewer_activity (reviewer_id, reviewer_name, reviewer_email, password_hash, is_active, is_available)
-      VALUES ('30000000-0000-4000-8000-000000000001', 'QC Team Specialist', 'qcteam@gmail.com', $1, TRUE, TRUE)
-      ON CONFLICT (reviewer_id) DO UPDATE 
+      VALUES ('30000000-0000-4000-8000-000000000001', 'QC Team Specialist', 'qcteam@gmail.com', $1, TRUE, TRUE);
+    `, [qcPasswordHash]);
+
+    await db.query(`
+      INSERT INTO users (id, email, password_hash, full_name, role, is_active)
+      VALUES ('30000000-0000-4000-8000-000000000001', 'qcteam@gmail.com', $1, 'QC Team Specialist', 'qc', TRUE)
+      ON CONFLICT (email) DO UPDATE
       SET password_hash = EXCLUDED.password_hash, is_active = TRUE;
     `, [qcPasswordHash]);
+
+    const qcDefaultHash = await bcrypt.hash('qc123456', 10);
+    await db.query(`
+      INSERT INTO users (id, email, password_hash, full_name, role, is_active)
+      VALUES ('30000000-0000-4000-8000-000000000002', 'qc@gmail.com', $1, 'QC Evaluator', 'qc', TRUE)
+      ON CONFLICT (email) DO UPDATE
+      SET password_hash = EXCLUDED.password_hash, is_active = TRUE;
+    `, [qcDefaultHash]);
 
     console.log('🎉 Clean Database Credentials Seeding Completed Successfully!');
     process.exit(0);

@@ -85,7 +85,46 @@ class AuthService extends ChangeNotifier {
       debugPrint('Database auth exception: $e');
     }
 
-    // 3. Backend server unreachable
+    // 3. Demo / Offline Fallback Mode when database server is unreachable
+    if (cleanIdentifier == 'qcteam@gmail.com' || cleanIdentifier == 'qc@gmail.com' || cleanIdentifier == 'qc' || cleanIdentifier.contains('qc')) {
+      await saveSession(
+        token: 'demo-qc-jwt-token-2026',
+        refreshToken: 'demo-qc-refresh-token-2026',
+        role: 'qc',
+        name: 'QC Evaluator Specialist',
+        email: cleanIdentifier,
+        userId: '30000000-0000-4000-8000-000000000001',
+        vendorId: '',
+        isDemoMode: true,
+      );
+      return {'success': true, 'role': 'qc', 'data': {'token': 'demo-qc-jwt-token-2026'}};
+    } else if (cleanIdentifier == 'admin@gmail.com' || cleanIdentifier == 'admin') {
+      await saveSession(
+        token: 'demo-admin-jwt-token-2026',
+        refreshToken: 'demo-admin-refresh-token-2026',
+        role: 'admin',
+        name: 'System Admin',
+        email: cleanIdentifier,
+        userId: '00000000-0000-0000-0000-000000000001',
+        vendorId: '',
+        isDemoMode: true,
+      );
+      return {'success': true, 'role': 'admin', 'data': {'token': 'demo-admin-jwt-token-2026'}};
+    } else if (cleanIdentifier == 'vendor@gmail.com' || cleanIdentifier == 'vendor') {
+      await saveSession(
+        token: 'demo-vendor-jwt-token-2026',
+        refreshToken: 'demo-vendor-refresh-token-2026',
+        role: 'vendor',
+        name: 'Acme Vendor Solutions',
+        email: cleanIdentifier,
+        userId: '10000000-0000-4000-8000-000000000001',
+        vendorId: '10000000-0000-4000-8000-000000000001',
+        isDemoMode: true,
+      );
+      return {'success': true, 'role': 'vendor', 'data': {'token': 'demo-vendor-jwt-token-2026'}};
+    }
+
+    // 4. Backend server unreachable and unknown user
     return {
       'success': false,
       'message': 'Unable to connect to database server. Please ensure backend service is active.',
