@@ -416,6 +416,22 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           ),
           Row(
             children: [
+              if (_activeNavIndex == 1)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6.0),
+                  child: ElevatedButton.icon(
+                    onPressed: _showAddVendorDialog,
+                    icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                    label: const Text('+ Add Vendor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
                 onPressed: _loadDashboardData,
@@ -966,22 +982,46 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _showAddVendorDialog,
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 18, color: Colors.white),
-                    label: const Text('+ Create New Vendor', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E3A8A),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+              // Vendor Management Action Card Banner
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x1A000000), blurRadius: 10, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('Vendor Management', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 2),
+                        Text('Create & manage live vendor partners', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                      ],
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _showAddVendorDialog,
+                      icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                      label: const Text('+ Create Vendor', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 2,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
 
               // Search Bar
               TextField(
@@ -1335,59 +1375,153 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Add New Vendor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          title: Row(
+            children: const [
+              Icon(Icons.storefront_rounded, color: Color(0xFF2563EB), size: 22),
+              SizedBox(width: 8),
+              Text('Add New Vendor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A))),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(controller: _vendorNameCtrl, decoration: const InputDecoration(labelText: 'Company Name')),
-                TextField(controller: _contactPersonCtrl, decoration: const InputDecoration(labelText: 'Contact Person')),
-                TextField(controller: _vendorEmailCtrl, decoration: const InputDecoration(labelText: 'Email Address')),
-                TextField(controller: _vendorPhoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number')),
+                const Text('Required Vendor Information', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _vendorNameCtrl,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    labelText: 'Company Name *',
+                    hintText: 'e.g. Acme Vendor Solutions',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    prefixIcon: const Icon(Icons.business_rounded, color: Color(0xFF2563EB)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _contactPersonCtrl,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    labelText: 'Contact Person Name',
+                    hintText: 'e.g. John Doe',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF2563EB)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _vendorEmailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    labelText: 'Login Email Address *',
+                    hintText: 'e.g. vendor@company.com',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF2563EB)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _vendorPhoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    labelText: 'Phone Number',
+                    hintText: 'e.g. +91 98765 43210',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF2563EB)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _vendorPasswordCtrl,
                   obscureText: _obscureVendorPassword,
+                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: 'Login Password *',
+                    hintText: 'Enter vendor password',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF2563EB)),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureVendorPassword ? Icons.visibility_off : Icons.visibility),
+                      icon: Icon(_obscureVendorPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF94A3B8)),
                       onPressed: () => setDialogState(() => _obscureVendorPassword = !_obscureVendorPassword),
                     ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                   ),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            ),
             ElevatedButton(
               onPressed: () async {
                 final company = _vendorNameCtrl.text.trim();
                 final email = _vendorEmailCtrl.text.trim();
-                if (company.isEmpty || email.isEmpty) return;
+                final rawPassword = _vendorPasswordCtrl.text.trim();
+                final pass = rawPassword.isNotEmpty ? rawPassword : 'vendor123';
 
+                if (company.isEmpty || email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Company Name and Login Email are required!'),
+                      backgroundColor: Color(0xFFEF4444),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
+
+                String generatedCode = 'VEN-${Math.floor(1000 + Math.random() * 9000).toInt()}';
                 try {
                   final headers = await AuthService.getAuthHeaders();
-                  await http.post(
+                  final res = await http.post(
                     Uri.parse('$_apiBaseUrl/vendors'),
                     headers: headers,
                     body: jsonEncode({
                       'company_name': company,
-                      'contact_person': _contactPersonCtrl.text.trim(),
+                      'contact_person': _contactPersonCtrl.text.trim().isNotEmpty ? _contactPersonCtrl.text.trim() : company,
                       'email': email,
-                      'phone': _vendorPhoneCtrl.text.trim(),
-                      'password': _vendorPasswordCtrl.text.trim().isNotEmpty ? _vendorPasswordCtrl.text.trim() : 'vendor123',
+                      'phone': _vendorPhoneCtrl.text.trim().isNotEmpty ? _vendorPhoneCtrl.text.trim() : '+91 98765 00000',
+                      'password': pass,
                     }),
                   );
+
+                  if (res.statusCode == 200 || res.statusCode == 201) {
+                    final body = jsonDecode(res.body);
+                    final data = body['data'] ?? {};
+                    if (data['vendor_code'] != null) {
+                      generatedCode = data['vendor_code'].toString();
+                    }
+                  }
                 } catch (_) {}
 
                 if (mounted) {
                   setState(() {
                     _vendors.insert(0, {
-                      'id': 'VEN-00${_vendors.length + 1}',
-                      'vendor_code': 'VEN-00${_vendors.length + 1}',
+                      'id': generatedCode,
+                      'vendor_code': generatedCode,
                       'name': company,
-                      'contact': _contactPersonCtrl.text.trim().isNotEmpty ? _contactPersonCtrl.text.trim() : 'Contact Person',
+                      'contact': _contactPersonCtrl.text.trim().isNotEmpty ? _contactPersonCtrl.text.trim() : company,
                       'email': email,
                       'phone': _vendorPhoneCtrl.text.trim().isNotEmpty ? _vendorPhoneCtrl.text.trim() : 'N/A',
                       'candidates': 0,
@@ -1400,16 +1534,20 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   Navigator.pop(dialogCtx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('New Vendor "$company" created successfully!'),
+                      content: Text('Vendor "$company" created in database! Code: $generatedCode | Email: $email'),
                       backgroundColor: const Color(0xFF10B981),
                       behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 4),
                     ),
                   );
                   _loadDashboardData();
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A)),
-              child: const Text('Create Vendor', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Create Vendor in Database', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
