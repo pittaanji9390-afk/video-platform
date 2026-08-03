@@ -262,6 +262,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
             'title': vid['title'] ?? 'Dataset Video Recording',
             'candidateName': vid['candidate_name'] ?? vid['full_name'] ?? 'Candidate',
             'candidatePhone': vid['candidate_phone'] ?? vid['phone'] ?? 'N/A',
+            'vendor_code': vCode.isNotEmpty ? vCode : (vendorCode.isNotEmpty ? vendorCode : 'VEN-001'),
             'env': vid['environment_tag'] ?? 'Indoor',
             'status': displayStatus,
             'duration': '$durStr Mins',
@@ -1043,9 +1044,11 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5),
             ),
             const SizedBox(height: 2),
-            const Text(
-              'Filter and track candidate dataset video uploads in real-time',
-              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            Text(
+              _vendorCode.isNotEmpty
+                  ? 'Candidate dataset video uploads for Vendor Code: $_vendorCode'
+                  : 'Candidate dataset video uploads for your Vendor Code',
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 14),
 
@@ -1100,7 +1103,13 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    const Text('Videos uploaded by candidates will appear here.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    Text(
+                      _vendorCode.isNotEmpty
+                          ? 'Videos uploaded under Vendor Code $_vendorCode will appear here.'
+                          : 'Videos uploaded by your candidates will appear here.',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               )
@@ -1123,7 +1132,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                         child: const Icon(Icons.play_arrow_rounded, color: Colors.white),
                       ),
                       title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('${item['env'] ?? ''}\nDuration: ${item['duration']}'),
+                      subtitle: Text('${item['candidateName']} (${item['vendor_code'] ?? _vendorCode})\n${item['env'] ?? 'Indoor'} • ${item['duration']}'),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: statusColor.withAlpha(20), borderRadius: BorderRadius.circular(8)),
