@@ -199,6 +199,35 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   final _vendorPasswordCtrl = TextEditingController();
   bool _obscureVendorPassword = true;
 
+  // QC Member Controllers & State
+  final _qcNameCtrl = TextEditingController();
+  final _qcEmailCtrl = TextEditingController();
+  final _qcPhoneCtrl = TextEditingController();
+  final _qcPasswordCtrl = TextEditingController();
+  final List<Map<String, dynamic>> _qcMembers = [
+    {
+      'id': 'QC-001',
+      'name': 'QC Evaluator',
+      'email': 'qc@demo.com',
+      'role': 'Lead QC Reviewer',
+      'phone': '+1 555-0199',
+    },
+    {
+      'id': 'QC-002',
+      'name': 'Senior Reviewer A',
+      'email': 'reviewer.a@demo.com',
+      'role': 'Senior Assessor',
+      'phone': '+1 555-0200',
+    },
+    {
+      'id': 'QC-003',
+      'name': 'Quality Lead B',
+      'email': 'lead.b@demo.com',
+      'role': 'Quality Specialist',
+      'phone': '+1 555-0201',
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -1317,21 +1346,31 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   ElevatedButton.icon(
-                    onPressed: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
-                    icon: const Icon(Icons.download_rounded, size: 16, color: Colors.white),
-                    label: const Text('Export CSV', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    onPressed: _showAddQCMemberDialog,
+                    icon: const Icon(Icons.person_add_rounded, size: 16, color: Colors.white),
+                    label: const Text('+ Create QC Member', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7C3AED),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: () => _triggerDownload('$_apiBaseUrl/qc-reviews/export/csv'),
+                    icon: const Icon(Icons.download_rounded, size: 16, color: Color(0xFF7C3AED)),
+                    label: const Text('Export CSV', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFDDD6FE)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               if (_qcSubmissions.isEmpty)
                 const Padding(
@@ -1652,6 +1691,91 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
+  void _showAddQCMemberDialog() {
+    _qcNameCtrl.clear();
+    _qcEmailCtrl.clear();
+    _qcPhoneCtrl.clear();
+    _qcPasswordCtrl.clear();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: const [
+              Icon(Icons.person_add_rounded, color: Color(0xFF7C3AED), size: 22),
+              SizedBox(width: 8),
+              Text('Create QC Member', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: _qcNameCtrl, decoration: const InputDecoration(labelText: 'Full Name')),
+                TextField(controller: _qcEmailCtrl, decoration: const InputDecoration(labelText: 'Email Address (e.g. qc@demo.com)')),
+                TextField(controller: _qcPhoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number')),
+                TextField(
+                  controller: _qcPasswordCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Password (min 6 chars)'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final name = _qcNameCtrl.text.trim();
+                final email = _qcEmailCtrl.text.trim();
+                if (name.isEmpty || email.isEmpty) return;
+
+                try {
+                  final headers = await AuthService.getAuthHeaders();
+                  await http.post(
+                    Uri.parse('$_apiBaseUrl/admins/qc-members'),
+                    headers: headers,
+                    body: jsonEncode({
+                      'full_name': name,
+                      'email': email,
+                      'phone': _qcPhoneCtrl.text.trim(),
+                      'password': _qcPasswordCtrl.text.trim().isNotEmpty ? _qcPasswordCtrl.text.trim() : 'qc123456',
+                    }),
+                  );
+                } catch (_) {}
+
+                if (mounted) {
+                  setState(() {
+                    _qcMembers.insert(0, {
+                      'id': 'QC-00${_qcMembers.length + 1}',
+                      'name': name,
+                      'email': email,
+                      'role': 'QC Evaluator',
+                      'phone': _qcPhoneCtrl.text.trim().isNotEmpty ? _qcPhoneCtrl.text.trim() : 'N/A',
+                    });
+                  });
+
+                  Navigator.pop(dialogCtx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('New QC Member "$name" created successfully!'),
+                      backgroundColor: const Color(0xFF7C3AED),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+              child: const Text('Create Member', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showActivityLogsDialog() {
     showDialog(
       context: context,
@@ -1717,7 +1841,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   }
 
   void _showAssignQCDialog(String videoId) {
-    String selectedReviewer = 'QC Evaluator (qc@demo.com)';
+    String selectedReviewer = _qcMembers.isNotEmpty ? '${_qcMembers.first['name']} (${_qcMembers.first['email']})' : 'QC Evaluator (qc@demo.com)';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1734,11 +1858,13 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
-              items: const [
-                DropdownMenuItem(value: 'QC Evaluator (qc@demo.com)', child: Text('QC Evaluator (qc@demo.com)')),
-                DropdownMenuItem(value: 'Senior Reviewer A', child: Text('Senior Reviewer A')),
-                DropdownMenuItem(value: 'Quality Lead B', child: Text('Quality Lead B')),
-              ],
+              items: _qcMembers.map((m) {
+                final label = '${m['name']} (${m['email']})';
+                return DropdownMenuItem<String>(
+                  value: label,
+                  child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                );
+              }).toList(),
               onChanged: (val) {
                 if (val != null) selectedReviewer = val;
               },
