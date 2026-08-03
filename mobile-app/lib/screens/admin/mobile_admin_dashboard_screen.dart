@@ -435,6 +435,22 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
+                )
+              else if (_activeNavIndex == 3)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6.0),
+                  child: ElevatedButton.icon(
+                    onPressed: _showAddQCMemberDialog,
+                    icon: const Icon(Icons.person_add_rounded, size: 16, color: Colors.white),
+                    label: const Text('+ Add QC', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
                 ),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
