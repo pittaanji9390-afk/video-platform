@@ -1758,7 +1758,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 backgroundColor: const Color(0xFF2563EB),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Create Vendor in Database', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('Create Vendor', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
