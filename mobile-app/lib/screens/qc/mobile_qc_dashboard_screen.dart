@@ -579,6 +579,116 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
         ),
       ],
     );
+  Future<void> _showQCProfileModal() async {
+    final session = await AuthService.restoreSession();
+    final name = session?['name'] ?? session?['username'] ?? 'QC Evaluator';
+    final email = session?['email'] ?? 'qc@demo.com';
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const CircleAvatar(
+                radius: 32,
+                backgroundColor: Color(0xFFF3E8FF),
+                child: Icon(Icons.verified_user_rounded, size: 36, color: Color(0xFF7C3AED)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                name,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                email,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  '🟢 QC Evaluator • ACTIVE',
+                  style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 11),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 12),
+              
+              // Member Info Details
+              _buildProfileDetailRow(Icons.badge_outlined, 'Role Designation', 'Quality Control Specialist'),
+              const SizedBox(height: 10),
+              _buildProfileDetailRow(Icons.assignment_outlined, 'Assigned Workload', '${_myTickets.length} Pending Tickets'),
+              const SizedBox(height: 10),
+              _buildProfileDetailRow(Icons.check_circle_outline_rounded, 'Completed Reviews', '${_qcApprovedList.length + _qcRejectedList.length} Processed'),
+              
+              const SizedBox(height: 24),
+
+              // Logout Button inside Profile Modal
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await AuthService.logout();
+                    if (mounted) {
+                      Navigator.pushReplacementNamed(context, AppRoutes.login);
+                    }
+                  },
+                  icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+                  label: const Text('Logout of QC Portal', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF7C3AED)),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          ],
+        ),
+      ],
+    );
   }
 
   @override
@@ -602,11 +712,13 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
             tooltip: 'Refresh Tickets',
           ),
           IconButton(
-            onPressed: () async {
-              await AuthService.logout();
-              if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.login);
-            },
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+            onPressed: _showQCProfileModal,
+            icon: const CircleAvatar(
+              radius: 14,
+              backgroundColor: Color(0xFFF3E8FF),
+              child: Icon(Icons.person_rounded, size: 18, color: Color(0xFF7C3AED)),
+            ),
+            tooltip: 'QC Member Profile',
           ),
         ],
       ),
