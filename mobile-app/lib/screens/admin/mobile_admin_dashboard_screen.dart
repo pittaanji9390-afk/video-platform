@@ -1070,9 +1070,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   }
 
   Widget _buildVendorCard(Map<String, dynamic> v) {
-    final status = v['status'] ?? 'Active';
-    final isActive = status == 'Active';
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -1102,24 +1099,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 const SizedBox(height: 2),
                 Text('Candidates: ${v['candidates']} • Email: ${v['email']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
               ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _toggleVendorStatus(v['id'] ?? ''),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isActive ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                status,
-                style: TextStyle(
-                  color: isActive ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-              ),
             ),
           ),
         ],
