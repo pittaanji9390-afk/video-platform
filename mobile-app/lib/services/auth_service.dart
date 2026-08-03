@@ -12,6 +12,7 @@ class AuthService extends ChangeNotifier {
   static const String keyUserEmail    = 'user_email';
   static const String keyUserId       = 'user_id';
   static const String keyVendorId     = 'vendor_id';
+  static const String keyVendorCode   = 'vendor_code';
   static const String keyIsDemoMode   = 'is_demo_mode';
 
   static SharedPreferences? _cachedPrefs;
@@ -62,6 +63,7 @@ class AuthService extends ChangeNotifier {
           email: cleanIdentifier,
           userId: user['id']?.toString() ?? '',
           vendorId: user['vendorId']?.toString() ?? user['vendor_id']?.toString() ?? '',
+          vendorCode: user['vendor_code']?.toString() ?? user['vendorCode']?.toString() ?? user['code']?.toString() ?? '',
           isDemoMode: false,
         );
 
@@ -146,6 +148,7 @@ class AuthService extends ChangeNotifier {
     required String email,
     required String userId,
     required String vendorId,
+    String vendorCode = '',
     bool isDemoMode = false,
   }) async {
     final prefs = await _getPrefs();
@@ -156,6 +159,7 @@ class AuthService extends ChangeNotifier {
     await prefs.setString(keyUserEmail, email);
     await prefs.setString(keyUserId, userId);
     await prefs.setString(keyVendorId, vendorId);
+    await prefs.setString(keyVendorCode, vendorCode);
     await prefs.setBool(keyIsDemoMode, isDemoMode);
   }
 
@@ -171,6 +175,7 @@ class AuthService extends ChangeNotifier {
     final role = prefs.getString(keyUserRole);
     if (token != null && token.isNotEmpty) {
       final userId = prefs.getString(keyUserId) ?? '';
+      final vCode = prefs.getString(keyVendorCode) ?? '';
       return {
         'token': token,
         'role': role ?? 'candidate',
@@ -179,6 +184,9 @@ class AuthService extends ChangeNotifier {
         'userId': userId,
         'id': userId,           // alias so both session['id'] and session['userId'] work
         'vendorId': prefs.getString(keyVendorId) ?? '',
+        'vendor_code': vCode,
+        'vendorCode': vCode,
+        'code': vCode,
       };
     }
     return null;

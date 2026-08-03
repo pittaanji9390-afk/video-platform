@@ -25,6 +25,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
   // Vendor session info
   String _vendorName = 'Acme Video Solutions';
+  String _vendorCode = '';
 
   // Dynamic stat counters (Defaulting to ZERO as requested)
   int _totalUploadedVideosCount = 0;
@@ -111,8 +112,14 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
     try {
       final headers = await AuthService.getAuthHeaders();
       final session = await AuthService.restoreSession();
-      if (session != null && session['name'] != null && session['name']!.isNotEmpty) {
-        _vendorName = session['name']!;
+      if (session != null) {
+        if (session['name'] != null && session['name']!.isNotEmpty) {
+          _vendorName = session['name']!;
+        }
+        final codeFromSession = session['vendor_code'] ?? session['code'] ?? session['vendorCode'];
+        if (codeFromSession != null && codeFromSession.toString().isNotEmpty) {
+          _vendorCode = codeFromSession.toString();
+        }
       }
 
       final vendorId = session?['id'] ?? session?['vendor_id'] ?? '';
@@ -1174,7 +1181,9 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
   // 5. VENDOR PROFILE TAB
   Widget _buildProfileTab() {
     final initials = _vendorName.isNotEmpty ? _vendorName[0].toUpperCase() : 'V';
-    final referralCode = 'VEN-${_vendorName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase().padRight(4, 'X').substring(0, 4)}-2026';
+    final referralCode = _vendorCode.isNotEmpty
+        ? _vendorCode
+        : 'VEN-${_vendorName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase().padRight(4, 'X').substring(0, 4)}-2026';
 
     return SafeArea(
       top: true,
