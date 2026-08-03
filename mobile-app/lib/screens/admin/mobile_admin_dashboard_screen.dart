@@ -1806,130 +1806,261 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   }
 
   void _showActivityLogsDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: const [
-                Icon(Icons.notifications_active_rounded, color: Color(0xFF2563EB), size: 22),
-                SizedBox(width: 8),
-                Text('Recent System Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+        builder: (modalCtx, setModalState) {
+          int activeFilterIndex = 0;
+
+          return SizedBox(
+            height: MediaQuery.of(context).size.height,
+            child: Column(
+              children: [
+                // Top App Bar Header
+                Container(
+                  padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 8, 16, 14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0B192C),
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                            onPressed: () => Navigator.pop(modalCtx),
+                          ),
+                          const SizedBox(width: 4),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Notifications Center',
+                                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                  if (_unreadNotificationsCount > 0) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(color: const Color(0xFFEF4444), borderRadius: BorderRadius.circular(10)),
+                                      child: Text(
+                                        '$_unreadNotificationsCount NEW',
+                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_recentActivities.length} Total System Alerts',
+                                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          if (_unreadNotificationsCount > 0)
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _unreadNotificationsCount = 0;
+                                  for (var act in _recentActivities) {
+                                    act['read'] = true;
+                                  }
+                                });
+                                setModalState(() {});
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('All notifications marked as read!'),
+                                    backgroundColor: Color(0xFF2563EB),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.done_all_rounded, color: Color(0xFF60A5FA), size: 16),
+                              label: const Text('Mark all read', style: TextStyle(color: Color(0xFF60A5FA), fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Filter Buttons Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All (${_recentActivities.length})', activeFilterIndex == 0, () {
+                        setModalState(() => activeFilterIndex = 0);
+                      }),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Unread ($_unreadNotificationsCount)', activeFilterIndex == 1, () {
+                        setModalState(() => activeFilterIndex = 1);
+                      }),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Notification Items Full Screen List
+                Expanded(
+                  child: Builder(
+                    builder: (context) {
+                      final filteredLogs = _recentActivities.where((act) {
+                        if (activeFilterIndex == 1) return act['read'] != true;
+                        return true;
+                      }).toList();
+
+                      if (filteredLogs.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.notifications_off_outlined, size: 64, color: Color(0xFFCBD5E1)),
+                              SizedBox(height: 14),
+                              Text('No Notifications Right Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+                              SizedBox(height: 4),
+                              Text('You are all caught up on system activities.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        itemCount: filteredLogs.length,
+                        itemBuilder: (context, idx) {
+                          final act = filteredLogs[idx];
+                          final isUnread = act['read'] != true;
+                          final iconData = act['icon'] as IconData? ?? Icons.notifications_rounded;
+                          final iconColor = act['color'] as Color? ?? const Color(0xFF2563EB);
+
+                          return InkWell(
+                            onTap: () {
+                              if (isUnread) {
+                                setState(() {
+                                  act['read'] = true;
+                                  if (_unreadNotificationsCount > 0) _unreadNotificationsCount--;
+                                });
+                                setModalState(() {});
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: isUnread ? const Color(0xFFEFF6FF) : Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: isUnread ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0)),
+                                boxShadow: const [
+                                  BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 2)),
+                                ],
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: iconColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(iconData, color: iconColor, size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                act['title'] ?? 'System Activity',
+                                                style: TextStyle(
+                                                  fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                                                  fontSize: 14,
+                                                  color: const Color(0xFF0F172A),
+                                                ),
+                                              ),
+                                            ),
+                                            if (isUnread)
+                                              Container(
+                                                width: 8,
+                                                height: 8,
+                                                margin: const EdgeInsets.only(left: 6),
+                                                decoration: const BoxDecoration(color: Color(0xFF2563EB), shape: BoxShape.circle),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          act['subtitle'] ?? '',
+                                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          act['time'] ?? 'Just now',
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _recentActivities.isEmpty
-                      ? const [
-                          Padding(
-                            padding: EdgeInsets.symmetric(vertical: 24),
-                            child: Center(
-                              child: Text('No recent system activity logs.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                            ),
-                          ),
-                        ]
-                      : _recentActivities.map((act) => _buildLogTile(act['title'], act['subtitle'], act['time'], act['icon'], act['color'])).toList(),
-                ),
-              ),
-            ),
-            actions: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 4,
-                children: [
-                  TextButton.icon(
-                    onPressed: _unreadNotificationsCount == 0
-                        ? null
-                        : () {
-                            setState(() {
-                              _unreadNotificationsCount = 0;
-                            });
-                            setDialogState(() {});
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('All system notifications marked as read!'),
-                                backgroundColor: Color(0xFF2563EB),
-                                behavior: SnackBarBehavior.floating,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                    icon: const Icon(Icons.done_all_rounded, size: 16, color: Color(0xFF2563EB)),
-                    label: const Text('Mark as Read', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                  TextButton.icon(
-                    onPressed: _recentActivities.isEmpty && _unreadNotificationsCount == 0
-                        ? null
-                        : () {
-                            setState(() {
-                              _recentActivities.clear();
-                              _unreadNotificationsCount = 0;
-                            });
-                            setDialogState(() {});
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Activity logs cleared.'),
-                                backgroundColor: Color(0xFF64748B),
-                                behavior: SnackBarBehavior.floating,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                    icon: const Icon(Icons.delete_sweep_rounded, size: 16, color: Color(0xFFEF4444)),
-                    label: const Text('Clear All', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Close', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildLogTile(String title, String desc, String time, IconData icon, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: color, size: 18),
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 12,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                const SizedBox(height: 2),
-                Text(desc, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                const SizedBox(height: 4),
-                Text(time, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
