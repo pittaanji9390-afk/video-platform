@@ -104,22 +104,24 @@ class VoiceCommandService {
 
   /// Match voice input against "Start Recording" & "Stop Recording", ignoring all other speech
   VoiceCommand? _matchCommand(String text) {
-    final cleaned = text.trim().toLowerCase();
+    // Strip punctuation marks to prevent "stop.", "stop!", "stop recording!" matching failures
+    final cleaned = text.trim().toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
     if (cleaned.isEmpty) return null;
 
-    // Match "Stop Recording" or "Stop"
-    if (cleaned.contains('stop recording') || 
-        cleaned == 'stop' || 
-        cleaned.startsWith('stop ') || 
-        cleaned.endsWith(' stop')) {
+    // Check for Stop variations: "stop", "stop recording", "stop record", "stop video", "please stop", "end recording", "finish recording", "cut", "halt", "done"
+    if (cleaned.contains('stop') || 
+        cleaned.contains('end recording') || 
+        cleaned.contains('finish recording') || 
+        cleaned == 'cut' || 
+        cleaned == 'halt' || 
+        cleaned == 'done') {
       return VoiceCommand.stop;
     }
 
-    // Match "Start Recording" or "Start"
-    if (cleaned.contains('start recording') || 
-        cleaned == 'start' || 
-        cleaned.startsWith('start ') || 
-        cleaned.endsWith(' start')) {
+    // Check for Start variations: "start", "start recording", "start record", "begin recording", "action"
+    if (cleaned.contains('start') || 
+        cleaned.contains('begin') || 
+        cleaned.contains('action')) {
       return VoiceCommand.start;
     }
 
@@ -136,12 +138,16 @@ class VoiceCommandService {
 
       _speechToText.listen(
         onResult: (result) {
-          final recognizedWords = result.recognizedWords.trim().toLowerCase();
-          _processTranscript(recognizedWords);
+          final recognizedWords = result.recognizedWords;
+          if (recognizedWords.isNotEmpty) {
+            _processTranscript(recognizedWords);
+          }
 
           // Check alternate hypotheses for instant command interception
           for (var alt in result.alternates) {
-            _processTranscript(alt.recognizedWords.trim().toLowerCase());
+            if (alt.recognizedWords.isNotEmpty) {
+              _processTranscript(alt.recognizedWords);
+            }
           }
         },
         listenFor: const Duration(hours: 1),
@@ -171,8 +177,15 @@ class VoiceCommandService {
   /// Ensure speech listening is active (re-triggers listener if stopped during video recording)
   void ensureListening() {
     _isListening = true;
-    if (!kIsWeb && !_speechToText.isListening) {
-      _startListeningLoop();
+    if (!kIsWeb) {
+      if (!_isInitialized) {
+        startListening(
+          onCommand: _onCommandDetected ?? (_) {},
+          onStatusChanged: _onStatusChanged,
+        );
+      } else if (!_speechToText.isListening) {
+        _startListeningLoop();
+      }
     }
   }
 

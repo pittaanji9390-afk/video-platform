@@ -206,6 +206,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
   }
 
+  Future<void> _navigateToEnvironmentThenCamera() async {
+    await Navigator.pushNamed(context, AppRoutes.environmentTag);
+  }
+
   Widget _buildSideDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
@@ -247,21 +251,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-
-            // Navigation Items List
+            const Divider(height: 1),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 children: [
                   _buildDrawerNavItem(
                     icon: Icons.home_rounded,
                     label: 'Dashboard',
-                    isSelected: _currentTab == 0,
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => _currentTab = 0);
-                    },
+                    isSelected: true,
+                    onTap: () => Navigator.pop(context),
                   ),
                   const SizedBox(height: 4),
                   _buildDrawerNavItem(
@@ -270,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     isSelected: false,
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.pushNamed(context, AppRoutes.cameraPermission);
+                      _navigateToEnvironmentThenCamera();
                     },
                   ),
                   const SizedBox(height: 4),
@@ -401,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
             currentIndex: _currentTab,
             onTap: (idx) {
               if (idx == 1) {
-                Navigator.pushNamed(context, AppRoutes.cameraPermission);
+                _navigateToEnvironmentThenCamera();
               } else if (idx == 2) {
                 Navigator.pushNamed(context, AppRoutes.uploadVideo);
               } else {
@@ -448,6 +447,10 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
   String _candidateName = 'Candidate';
   String? _dashboardError;
   final List<Map<String, dynamic>> _myUploads = [];
+
+  Future<void> _navigateToEnvironmentThenCamera() async {
+    await Navigator.pushNamed(context, AppRoutes.environmentTag);
+  }
 
   @override
   void initState() {
@@ -1071,9 +1074,12 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(
-                                    _videosUploaded == 0 ? 'Start recording! 🎥' : 'Keep going! 🚀',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                                  GestureDetector(
+                                    onTap: _navigateToEnvironmentThenCamera,
+                                    child: Text(
+                                      _videosUploaded == 0 ? 'Start recording! 🎥' : 'Keep going! 🚀',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1188,7 +1194,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                     icon: Icons.videocam_rounded,
                     title: 'Start Recording',
                     subtitle: 'Capture your best moments',
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.cameraPermission),
+                    onTap: _navigateToEnvironmentThenCamera,
                   ),
                   _buildReferenceQuickAction(
                     icon: Icons.cloud_upload_rounded,

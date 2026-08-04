@@ -126,6 +126,11 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
           _elapsedSeconds++;
         });
 
+        // Ensure voice command listener stays active during recording for "Stop Recording"
+        if (_isRecording) {
+          VoiceCommandService.instance.ensureListening();
+        }
+
         // Auto-stop at 30 minutes and trigger Alert Buzzer modal
         if (_elapsedSeconds >= maxRecordingSeconds) {
           _stopRecording();
@@ -550,20 +555,6 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
         elevation: 0.5,
         scrolledUnderElevation: 0.5,
         title: const Text('Record Video Data', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sell_outlined, color: Color(0xFF64748B)),
-            tooltip: 'Environment Tag',
-            onPressed: () async {
-              final result = await Navigator.pushNamed(context, AppRoutes.environmentTag);
-              if (result != null && result is String) {
-                setState(() {
-                  _selectedEnvironmentTag = result;
-                });
-              }
-            },
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
           child: Container(color: const Color(0xFFE2E8F0), height: 1.0),
@@ -572,46 +563,6 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-
-            // Environment Tag Banner Header
-            GestureDetector(
-              onTap: () async {
-                final result = await Navigator.pushNamed(context, AppRoutes.environmentTag);
-                if (result != null && result is String) {
-                  setState(() {
-                    _selectedEnvironmentTag = result;
-                  });
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.sell_rounded, color: Color(0xFF2563EB), size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _selectedEnvironmentTag != null
-                            ? 'Environment: $_selectedEnvironmentTag'
-                            : 'Select Environment Tag (Kitchen, Bedroom, etc.)',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E40AF),
-                        ),
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right_rounded, color: Color(0xFF2563EB), size: 20),
-                  ],
-                ),
-              ),
-            ),
 
             // Camera / Live Recorder Preview Area
             Expanded(

@@ -14,6 +14,10 @@ class CandidateScreen extends StatefulWidget {
 class _CandidateScreenState extends State<CandidateScreen> {
   int _currentTab = 0;
 
+  Future<void> _navigateToEnvironmentThenCamera() async {
+    await Navigator.pushNamed(context, AppRoutes.environmentTag);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,7 +40,7 @@ class _CandidateScreenState extends State<CandidateScreen> {
         currentIndex: _currentTab,
         onTap: (idx) {
           if (idx == 1) {
-            Navigator.pushNamed(context, AppRoutes.cameraPermission);
+            _navigateToEnvironmentThenCamera();
           } else if (idx == 2) {
             Navigator.pushNamed(context, AppRoutes.uploadVideo);
           } else {
@@ -86,6 +90,10 @@ class CandidateDashboardTab extends StatefulWidget {
 
 class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
   String _candidateName = 'Candidate';
+
+  Future<void> _navigateToEnvironmentThenCamera() async {
+    await Navigator.pushNamed(context, AppRoutes.environmentTag);
+  }
 
   @override
   void initState() {
@@ -404,7 +412,7 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
         'icon': Icons.videocam_rounded,
         'bgColor': const Color(0xFFFEE2E2),
         'iconColor': const Color(0xFFEF4444),
-        'onTap': () => Navigator.pushNamed(context, AppRoutes.cameraPermission),
+        'onTap': () => _navigateToEnvironmentThenCamera(),
       },
       {
         'title': 'Upload History',

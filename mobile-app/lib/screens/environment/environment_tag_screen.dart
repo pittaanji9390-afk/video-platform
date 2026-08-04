@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../config/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 
 class EnvironmentTagItem {
@@ -91,7 +92,11 @@ class _EnvironmentTagScreenState extends State<EnvironmentTagScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
-      Navigator.pop(context, _selectedTag);
+      if (Navigator.canPop(context) && ModalRoute.of(context)?.willHandlePopInternally == true) {
+        Navigator.pop(context, _selectedTag);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.cameraPermission);
+      }
     }
   }
 
