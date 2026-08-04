@@ -55,15 +55,15 @@ class CandidateVideoStore {
           final cId = vid['candidate_id']?.toString() ?? vid['candidateId']?.toString() ?? '';
           final cEmail = vid['email']?.toString() ?? '';
 
-          // Strict Candidate Scoping: verify owner matches logged-in user
-          if (currentUserId.isNotEmpty || currentUserEmail.isNotEmpty) {
-            final bool hasOwnerInfo = cId.isNotEmpty || cEmail.isNotEmpty;
-            if (!hasOwnerInfo) continue;
-
-            final bool matchesId = currentUserId.isNotEmpty && cId == currentUserId;
-            final bool matchesEmail = currentUserEmail.isNotEmpty && cEmail.toLowerCase() == currentUserEmail.toLowerCase();
-
-            if (!matchesId && !matchesEmail) continue;
+          // Candidate Scoping: verify owner matches logged-in user if owner info exists
+          if (cId.isNotEmpty && currentUserId.isNotEmpty) {
+            if (cId.toLowerCase() != currentUserId.toLowerCase()) {
+              final cEmailLower = cEmail.toLowerCase();
+              final curEmailLower = currentUserEmail.toLowerCase();
+              if (curEmailLower.isEmpty || cEmailLower != curEmailLower) {
+                continue;
+              }
+            }
           }
 
           final id = vid['id']?.toString() ?? '';
@@ -105,15 +105,15 @@ class CandidateVideoStore {
             final cEmail = item['candidateEmail']?.toString() ?? '';
             final cId = item['candidateId']?.toString() ?? '';
 
-            // Strict Candidate Scoping
-            if (currentUserId.isNotEmpty || currentUserEmail.isNotEmpty) {
-              final bool hasOwnerInfo = cId.isNotEmpty || cEmail.isNotEmpty;
-              if (!hasOwnerInfo) continue;
-
-              final bool matchesId = currentUserId.isNotEmpty && cId == currentUserId;
-              final bool matchesEmail = currentUserEmail.isNotEmpty && cEmail.toLowerCase() == currentUserEmail.toLowerCase();
-
-              if (!matchesId && !matchesEmail) continue;
+            // Candidate Scoping
+            if (cId.isNotEmpty && currentUserId.isNotEmpty) {
+              if (cId.toLowerCase() != currentUserId.toLowerCase()) {
+                final cEmailLower = cEmail.toLowerCase();
+                final curEmailLower = currentUserEmail.toLowerCase();
+                if (curEmailLower.isEmpty || cEmailLower != curEmailLower) {
+                  continue;
+                }
+              }
             }
 
             final id = item['id']?.toString() ?? '';

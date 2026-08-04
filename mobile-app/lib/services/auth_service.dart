@@ -13,6 +13,7 @@ class AuthService extends ChangeNotifier {
   static const String keyUserId       = 'user_id';
   static const String keyVendorId     = 'vendor_id';
   static const String keyVendorCode   = 'vendor_code';
+  static const String keyUserPhone    = 'user_phone';
   static const String keyIsDemoMode   = 'is_demo_mode';
 
   static SharedPreferences? _cachedPrefs;
@@ -64,6 +65,7 @@ class AuthService extends ChangeNotifier {
           userId: user['id']?.toString() ?? '',
           vendorId: user['vendorId']?.toString() ?? user['vendor_id']?.toString() ?? '',
           vendorCode: user['vendor_code']?.toString() ?? user['vendorCode']?.toString() ?? user['code']?.toString() ?? '',
+          phone: user['phone']?.toString() ?? user['mobile']?.toString() ?? '',
           isDemoMode: false,
         );
 
@@ -149,6 +151,7 @@ class AuthService extends ChangeNotifier {
     required String userId,
     required String vendorId,
     String vendorCode = '',
+    String phone = '',
     bool isDemoMode = false,
   }) async {
     final prefs = await _getPrefs();
@@ -160,6 +163,7 @@ class AuthService extends ChangeNotifier {
     await prefs.setString(keyUserId, userId);
     await prefs.setString(keyVendorId, vendorId);
     await prefs.setString(keyVendorCode, vendorCode);
+    await prefs.setString(keyUserPhone, phone);
     await prefs.setBool(keyIsDemoMode, isDemoMode);
   }
 
@@ -181,6 +185,7 @@ class AuthService extends ChangeNotifier {
         'role': role ?? 'candidate',
         'name': prefs.getString(keyUserName) ?? '',
         'email': prefs.getString(keyUserEmail) ?? '',
+        'phone': prefs.getString(keyUserPhone) ?? '',
         'userId': userId,
         'id': userId,           // alias so both session['id'] and session['userId'] work
         'vendorId': prefs.getString(keyVendorId) ?? '',

@@ -102,77 +102,28 @@ class VoiceCommandService {
     }
   }
 
-  /// Match voice input against known commands using flexible phonetic & tokenized variations
+  /// Match voice input against "Start Recording" & "Stop Recording", ignoring all other speech
   VoiceCommand? _matchCommand(String text) {
     final cleaned = text.trim().toLowerCase();
     if (cleaned.isEmpty) return null;
 
-    final words = cleaned.split(RegExp(r'[\s,.\-!_]+'));
-
-    // STOP COMMAND VARIATIONS (Highest priority: catch any phonetic variation or mishearing of stop)
-    for (final w in words) {
-      if (w.isEmpty) continue;
-      // Direct matches & common speech-to-text misspellings / phonetic variations of "stop"
-      if (w == 'stop' ||
-          w == 'stopp' ||
-          w == 'stoppp' ||
-          w == 'top' ||
-          w == 'shop' ||
-          w == 'step' ||
-          w == 'spot' ||
-          w == 'stock' ||
-          w == 'sop' ||
-          w == 'stab' ||
-          w == 'soup' ||
-          w == 'stuff' ||
-          w == 'tap' ||
-          w == 'end' ||
-          w == 'finish' ||
-          w == 'done' ||
-          w == 'pause' ||
-          w == 'cut' ||
-          w == 'halt' ||
-          w == 'quit' ||
-          w == 'cancel' ||
-          w == 'close' ||
-          w == 'over') {
-        return VoiceCommand.stop;
-      }
-      // Substring / prefix / suffix matches (e.g. "stop-recording", "please-stop", "stopping")
-      if (w.startsWith('stop') || w.startsWith('stopp') || w.startsWith('step') || w.endsWith('stop')) {
-        return VoiceCommand.stop;
-      }
-    }
-
-    // Full sentence string contains check
-    if (cleaned.contains('stop') ||
-        cleaned.contains('end recording') ||
-        cleaned.contains('finish recording') ||
-        cleaned.contains('stop video') ||
-        cleaned.contains('pause recording') ||
-        cleaned.contains('halt recording')) {
+    // Match "Stop Recording" or "Stop"
+    if (cleaned.contains('stop recording') || 
+        cleaned == 'stop' || 
+        cleaned.startsWith('stop ') || 
+        cleaned.endsWith(' stop')) {
       return VoiceCommand.stop;
     }
 
-    // START COMMAND VARIATIONS
-    for (final w in words) {
-      if (w == 'start' ||
-          w == 'begin' ||
-          w == 'go' ||
-          w == 'record' ||
-          w == 'capture' ||
-          w == 'action') {
-        return VoiceCommand.start;
-      }
-      if (w.startsWith('start') || w.startsWith('record')) {
-        return VoiceCommand.start;
-      }
-    }
-
-    if (cleaned.contains('start') || cleaned.contains('begin') || cleaned.contains('start recording')) {
+    // Match "Start Recording" or "Start"
+    if (cleaned.contains('start recording') || 
+        cleaned == 'start' || 
+        cleaned.startsWith('start ') || 
+        cleaned.endsWith(' start')) {
       return VoiceCommand.start;
     }
 
+    // Ignore all other speech
     return null;
   }
 

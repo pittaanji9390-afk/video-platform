@@ -25,6 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Check if user has an active, authenticated session in SharedPreferences
     final session = await AuthService.restoreSession();
+    if (!mounted) return;
     if (session != null && session['token'] != null && session['token']!.isNotEmpty) {
       final role = (session['role'] ?? 'candidate').toLowerCase();
       if (role == 'admin' || role.contains('admin')) {
@@ -37,8 +38,8 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacementNamed(context, AppRoutes.home);
       }
     } else {
-      // If no valid authenticated session, direct user to Login Screen
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
+      // If no valid authenticated session, direct user to Onboarding Screens
+      Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
     }
   }
 

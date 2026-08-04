@@ -164,6 +164,38 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
       final vendorId = session?['id'] ?? session?['vendor_id'] ?? '';
       final vendorCode = _vendorCode.isNotEmpty ? _vendorCode : (session?['vendor_code'] ?? session?['code'] ?? '');
+
+      // Fetch vendor details from backend database to sync exact phone number created by Admin
+      try {
+        final vendorRes = await http.get(
+          Uri.parse('${ApiConstants.baseUrl}/api/v1/vendors'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 4));
+        if (vendorRes.statusCode == 200) {
+          final data = jsonDecode(vendorRes.body);
+          final List<dynamic> vendors = data['data'] is List ? data['data'] : (data['data']?['items'] ?? []);
+          dynamic matchingVendor;
+          for (var v in vendors) {
+            final vCode = v['vendor_code']?.toString() ?? '';
+            final vEmail = v['email']?.toString() ?? '';
+            if ((vCode.isNotEmpty && vCode.toLowerCase() == vendorCode.toLowerCase()) ||
+                (vEmail.isNotEmpty && vEmail.toLowerCase() == _vendorEmail.toLowerCase())) {
+              matchingVendor = v;
+              break;
+            }
+          }
+          if (matchingVendor != null && mounted) {
+            setState(() {
+              if (matchingVendor['phone'] != null && matchingVendor['phone'].toString().isNotEmpty) {
+                _vendorPhone = matchingVendor['phone'].toString();
+              }
+              if (matchingVendor['company_name'] != null && matchingVendor['company_name'].toString().isNotEmpty) {
+                _vendorName = matchingVendor['company_name'].toString();
+              }
+            });
+          }
+        }
+      } catch (_) {}
       final candUrl = vendorCode.isNotEmpty
           ? '${ApiConstants.baseUrl}/api/v1/candidates?vendor_code=$vendorCode'
           : (vendorId.isNotEmpty

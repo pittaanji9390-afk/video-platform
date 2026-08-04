@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../config/routes/app_routes.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback? onBackPressed;
+
+  const ProfileScreen({super.key, this.onBackPressed});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -99,7 +100,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          onPressed: () {
+            if (widget.onBackPressed != null) {
+              widget.onBackPressed!();
+            } else if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+        ),
         title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0.5,
       ),
@@ -152,23 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 24),
 
-              // QR Code Card
-              Card(
-                elevation: 0,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
-                child: const Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      Icon(Icons.qr_code_2_rounded, size: 100, color: Color(0xFF2563EB)),
-                      SizedBox(height: 8),
-                      Text('Scan Candidate Verification QR Code', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
+
 
               // Logout Button
               SizedBox(
@@ -181,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     }
                   },
                   icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
-                  label: const Text('Sign Out', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                  label: const Text('Log Out', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: const BorderSide(color: Color(0xFFFCA5A5)),

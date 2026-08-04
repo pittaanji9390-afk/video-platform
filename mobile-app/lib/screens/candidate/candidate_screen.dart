@@ -25,7 +25,11 @@ class _CandidateScreenState extends State<CandidateScreen> {
           const Placeholder(), // Record tab triggers camera
           const Placeholder(), // Uploads tab
           const NotificationsScreen(),
-          const ProfileScreen(),
+          ProfileScreen(
+            onBackPressed: () {
+              setState(() => _currentTab = 0);
+            },
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

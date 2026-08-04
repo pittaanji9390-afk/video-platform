@@ -41,7 +41,7 @@ class AuthService {
     if (!userRow) {
       try {
         const vendorRes = await db.query(
-          'SELECT id, email, vendor_code, password_hash, COALESCE(contact_person, company_name) AS full_name, company_name, is_active FROM vendors WHERE LOWER(email) = $1 AND (deleted_at IS NULL OR deleted_at > NOW())',
+          'SELECT id, email, phone, contact_person, vendor_code, password_hash, COALESCE(company_name, contact_person) AS full_name, company_name, is_active FROM vendors WHERE LOWER(email) = $1 AND (deleted_at IS NULL OR deleted_at > NOW())',
           [identifier]
         );
         if (vendorRes.rows.length > 0) {
@@ -165,6 +165,7 @@ class AuthService {
         full_name: userRow.full_name,
         role: userRole,
         vendor_code: userRow.vendor_code || null,
+        phone: userRow.phone || null,
       },
     };
   }

@@ -19,8 +19,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<_HomeDashboardTabState> _homeTabKey = GlobalKey<_HomeDashboardTabState>();
   int _currentTab = 0;
   int _unreadCount = 0;
+  String _candidateName = 'Vasavi Candidate';
   List<Map<String, dynamic>> _realtimeNotifications = [];
 
   @override
@@ -36,6 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushReplacementNamed(context, AppRoutes.login);
       }
       return;
+    }
+    if (session['name'] != null && session['name']!.isNotEmpty) {
+      setState(() {
+        _candidateName = session['name']!;
+      });
     }
     _fetchUnreadNotifications();
   }
@@ -182,20 +190,207 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _handleLogout() async {
+    await AuthService.logout();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
+    }
+  }
+
+  String _getInitials(String name) {
+    if (name.trim().isEmpty) return 'VC';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+  }
+
+  Widget _buildSideDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Top Candidate User Card Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: const Color(0xFF2563EB),
+                    child: Text(
+                      _getInitials(_candidateName),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _candidateName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Candidate',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Navigation Items List
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                children: [
+                  _buildDrawerNavItem(
+                    icon: Icons.home_rounded,
+                    label: 'Dashboard',
+                    isSelected: _currentTab == 0,
+                    onTap: () {
+                      Navigator.pop(context);
+                      setState(() => _currentTab = 0);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  _buildDrawerNavItem(
+                    icon: Icons.videocam_rounded,
+                    label: 'Start Recording',
+                    isSelected: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, AppRoutes.cameraPermission);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  _buildDrawerNavItem(
+                    icon: Icons.cloud_upload_rounded,
+                    label: 'Upload History',
+                    isSelected: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, AppRoutes.uploadVideo);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  _buildDrawerNavItem(
+                    icon: Icons.folder_special_rounded,
+                    label: 'Draft Videos',
+                    isSelected: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _homeTabKey.currentState?.showDraftVideosModal();
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  _buildDrawerNavItem(
+                    icon: Icons.help_outline_rounded,
+                    label: 'Help Center',
+                    isSelected: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _homeTabKey.currentState?.showHelpCenterModal();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Footer Logout Action
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.logout_rounded, color: Color(0xFF2563EB), size: 20),
+                      SizedBox(width: 12),
+                      Text(
+                        'Logout',
+                        style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        dense: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Icon(
+          icon,
+          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569),
+          size: 20,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF1E293B),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: _buildSideDrawer(),
       body: IndexedStack(
         index: _currentTab,
         children: [
           _HomeDashboardTab(
+            key: _homeTabKey,
             unreadCount: _unreadCount,
             onNotificationTap: _showNotificationPopover,
+            onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
           ),
           const Placeholder(),
           const Placeholder(),
-          const ProfileScreen(),
+          ProfileScreen(
+            onBackPressed: () {
+              setState(() => _currentTab = 0);
+            },
+          ),
         ],
       ),
       bottomNavigationBar: Column(
@@ -232,10 +427,13 @@ class _HomeScreenState extends State<HomeScreen> {
 class _HomeDashboardTab extends StatefulWidget {
   final int unreadCount;
   final VoidCallback onNotificationTap;
+  final VoidCallback? onMenuTap;
 
   const _HomeDashboardTab({
+    super.key,
     required this.unreadCount,
     required this.onNotificationTap,
+    this.onMenuTap,
   });
 
   @override
@@ -246,9 +444,10 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
   bool _isLoading = false;
   int _videosUploaded = 0;
   String _hoursCollected = '0.0 hrs';
+  String _approvedHoursText = '0 Approved Hours';
   String _candidateName = 'Candidate';
   String? _dashboardError;
-  List<Map<String, dynamic>> _myUploads = [];
+  final List<Map<String, dynamic>> _myUploads = [];
 
   @override
   void initState() {
@@ -286,17 +485,20 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
       final videos = await CandidateVideoStore.getUploadedVideos();
 
       int approvedSeconds = 0;
+      int totalSeconds = 0;
       _myUploads.clear();
 
       for (var v in videos) {
         final st = (v['status'] ?? 'Pending QC').toString();
         final stLower = st.toLowerCase();
 
-        // Calculate Hours Collected dynamically by summing duration of all APPROVED videos
+        final durSec = v['durationSeconds'] is int
+            ? v['durationSeconds'] as int
+            : CandidateVideoStore.parseDurationSeconds(v['duration']);
+
+        totalSeconds += durSec;
+
         if (stLower == 'approved' || stLower == 'qc_approved') {
-          final durSec = v['durationSeconds'] is int
-              ? v['durationSeconds'] as int
-              : CandidateVideoStore.parseDurationSeconds(v['duration']);
           approvedSeconds += durSec;
         }
 
@@ -322,20 +524,25 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
         });
       }
 
-      // Count only videos uploaded by the logged-in user
+      // Count only videos uploaded by the logged-in candidate
       _videosUploaded = videos.length;
 
-      // Sum duration of all approved videos
-      if (approvedSeconds == 0) {
+      // Sum duration of all videos collected by this candidate
+      if (totalSeconds == 0) {
         _hoursCollected = '0.0 hrs';
       } else {
-        final hoursNum = approvedSeconds / 3600.0;
+        final hoursNum = totalSeconds / 3600.0;
         _hoursCollected = '${hoursNum.toStringAsFixed(1)} hrs';
       }
+
+      // Sum approved hours
+      final appHours = approvedSeconds / 3600.0;
+      _approvedHoursText = '${appHours.toStringAsFixed(1)} Approved Hours';
     } catch (e) {
       debugPrint('Dashboard data load error: $e');
       _videosUploaded = 0;
       _hoursCollected = '0.0 hrs';
+      _approvedHoursText = '0 Approved Hours';
       _dashboardError = 'Unable to fetch dashboard statistics. Pull down to refresh.';
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -348,7 +555,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
     return fallback;
   }
 
-  void _showHelpCenterModal() {
+  void showHelpCenterModal() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
@@ -359,14 +566,24 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(color: Color(0xFFEFF6FF), shape: BoxShape.circle),
-                  child: const Icon(Icons.help_center_rounded, color: Color(0xFF2563EB), size: 22),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(color: Color(0xFFEFF6FF), shape: BoxShape.circle),
+                      child: const Icon(Icons.help_center_rounded, color: Color(0xFF2563EB), size: 22),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Candidate Help Center', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                const Text('Candidate Help Center', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 24),
+                  tooltip: 'Close',
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -401,25 +618,39 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(color: Color(0xFFEFF6FF), shape: BoxShape.circle),
-                      child: const Icon(Icons.settings_rounded, color: Color(0xFF2563EB), size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Candidate Preferences & Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                        Text('Configure camera specs, auto-save & notifications', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      ],
-                    ),
-                  ],
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(color: Color(0xFFEFF6FF), shape: BoxShape.circle),
+                  child: const Icon(Icons.settings_rounded, color: Color(0xFF2563EB), size: 22),
                 ),
-                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B))),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Candidate Preferences & Settings',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Configure camera specs, auto-save & notifications',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 24),
+                  tooltip: 'Close',
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -431,7 +662,8 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
-                      Text('Default Resolution', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                      Expanded(child: Text('Default Resolution', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155)))),
+                      SizedBox(width: 8),
                       Text('1080p (30-60 fps)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
                     ],
                   ),
@@ -439,7 +671,8 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
-                      Text('Preferred Codec', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                      Expanded(child: Text('Preferred Codec', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155)))),
+                      SizedBox(width: 8),
                       Text('H.264 / H.265', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
                     ],
                   ),
@@ -447,7 +680,8 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
-                      Text('Auto Local Save on Device', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                      Expanded(child: Text('Auto Local Save on Device', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155)))),
+                      SizedBox(width: 8),
                       Text('ENABLED ✓', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
                     ],
                   ),
@@ -455,7 +689,8 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
-                      Text('30-Min Recording Alert Buzzer', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                      Expanded(child: Text('30-Min Recording Alert Buzzer', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF334155)))),
+                      SizedBox(width: 8),
                       Text('ACTIVE 🔔', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
                     ],
                   ),
@@ -466,7 +701,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
-                _showHelpCenterModal();
+                showHelpCenterModal();
               },
               icon: const Icon(Icons.help_outline_rounded, color: Colors.white),
               label: const Text('Open Help Center & Instructions', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -478,7 +713,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
     );
   }
 
-  void _showDraftVideosModal() {
+  void showDraftVideosModal() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -553,22 +788,26 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: const BoxDecoration(color: Color(0xFFDBEAFE), shape: BoxShape.circle),
-                            child: const Icon(Icons.folder_special_rounded, color: Color(0xFF2563EB), size: 22),
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Draft Videos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                              Text('${draftsList.length} Saved Drafts', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                            ],
-                          ),
-                        ],
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(color: Color(0xFFDBEAFE), shape: BoxShape.circle),
+                              child: const Icon(Icons.folder_special_rounded, color: Color(0xFF2563EB), size: 22),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Draft Videos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                  Text('${draftsList.length} Saved Drafts', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B))),
                     ],
@@ -693,14 +932,31 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      const Text('Welcome Back,', style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
-                      Row(
+                      IconButton(
+                        icon: const Icon(Icons.menu_rounded, color: Color(0xFF0F172A), size: 26),
+                        onPressed: () {
+                          if (widget.onMenuTap != null) {
+                            widget.onMenuTap!();
+                          } else {
+                            Scaffold.of(context).openDrawer();
+                          }
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(_candidateName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5)),
-                          const Text(' 👋', style: TextStyle(fontSize: 20)),
+                          const Text('Welcome Back,', style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                          Row(
+                            children: [
+                              Text(_candidateName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5)),
+                              const Text(' 👋', style: TextStyle(fontSize: 20)),
+                            ],
+                          ),
                         ],
                       ),
                     ],
@@ -864,7 +1120,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    _hoursCollected == '0.0 hrs' ? '0 Approved Hours' : 'Awesome! ⭐',
+                                    _approvedHoursText,
                                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
                                   ),
                                 ],
@@ -944,13 +1200,13 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                     icon: Icons.folder_special_rounded,
                     title: 'Draft Videos',
                     subtitle: 'Continue editing your drafts',
-                    onTap: _showDraftVideosModal,
+                    onTap: showDraftVideosModal,
                   ),
                   _buildReferenceQuickAction(
                     icon: Icons.help_outline_rounded,
                     title: 'Help Center',
                     subtitle: 'Get support and find answers',
-                    onTap: _showHelpCenterModal,
+                    onTap: showHelpCenterModal,
                   ),
                 ],
               ),

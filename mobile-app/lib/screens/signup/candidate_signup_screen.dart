@@ -19,17 +19,116 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
+  final FocusNode _passwordFocusNode = FocusNode();
+  bool _isPasswordFocused = false;
+  String _currentPassword = '';
+
   bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _passwordFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isPasswordFocused = _passwordFocusNode.hasFocus;
+        });
+      }
+    });
+    _passwordController.addListener(() {
+      if (mounted) {
+        setState(() {
+          _currentPassword = _passwordController.text;
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _passwordFocusNode.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _vendorCodeController.dispose();
     _fullNameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  bool get _hasMinLength => _currentPassword.length >= 6;
+  bool get _hasLetter => RegExp(r'[a-zA-Z]').hasMatch(_currentPassword);
+  bool get _hasNumber => RegExp(r'[0-9]').hasMatch(_currentPassword);
+  bool get _isPasswordValid => _hasMinLength && _hasLetter && _hasNumber;
+
+  Widget _buildPasswordRequirements() {
+    final showRequirements = _isPasswordFocused || _currentPassword.isNotEmpty;
+    if (!showRequirements) return const SizedBox.shrink();
+
+    final allMet = _isPasswordValid;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: allMet ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: allMet ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                allMet ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                size: 16,
+                color: allMet ? const Color(0xFF10B981) : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                allMet ? '✓ Password requirements met!' : 'Password must contain:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: allMet ? const Color(0xFF047857) : const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildRequirementItem('At least 6 characters long', _hasMinLength),
+          const SizedBox(height: 4),
+          _buildRequirementItem('At least 1 letter (a-z, A-Z)', _hasLetter),
+          const SizedBox(height: 4),
+          _buildRequirementItem('At least 1 number (0-9)', _hasNumber),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirementItem(String text, bool isMet) {
+    return Row(
+      children: [
+        Icon(
+          isMet ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+          size: 14,
+          color: isMet ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isMet ? FontWeight.w600 : FontWeight.w400,
+            color: isMet ? const Color(0xFF065F46) : const Color(0xFF64748B),
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _handleSignup() async {
@@ -210,6 +309,7 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
+                  focusNode: _passwordFocusNode,
                   obscureText: _obscurePassword,
                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
@@ -248,9 +348,16 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                     if (val.trim().length < 6) {
                       return 'Password must be at least 6 characters';
                     }
+                    if (!RegExp(r'[a-zA-Z]').hasMatch(val)) {
+                      return 'Password must contain at least 1 letter';
+                    }
+                    if (!RegExp(r'[0-9]').hasMatch(val)) {
+                      return 'Password must contain at least 1 number';
+                    }
                     return null;
                   },
                 ),
+                _buildPasswordRequirements(),
                 const SizedBox(height: 18),
 
                 // Vendor Code Field

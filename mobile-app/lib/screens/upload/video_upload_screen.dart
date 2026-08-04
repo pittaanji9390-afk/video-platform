@@ -462,7 +462,34 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
               const SizedBox(height: 14),
 
               // All Uploads List Cards
-              ListView.builder(
+              if (_uploadsHistory.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.cloud_upload_outlined, size: 54, color: Color(0xFF94A3B8)),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No Uploaded Videos Yet',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Record new dataset video clips using your camera and upload them here.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _uploadsHistory.length,

@@ -40,9 +40,6 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
   bool _isFetchingLocation = false;
   String? _locationErrorMessage;
 
-  // Voice command state
-  String _voiceStatusMessage = '🎤 Listening for "Start Recording" / "Stop Recording"';
-
   // Recording Timer with 30-min limit
   static const int maxRecordingSeconds = 1800; // 30 minutes
   static const int warningThresholdSeconds = 1500; // 25 minutes
@@ -66,13 +63,6 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
           _startRecording();
         } else if (command == VoiceCommand.stop && _isRecording) {
           _stopRecording();
-        }
-      },
-      onStatusChanged: (status) {
-        if (mounted) {
-          setState(() {
-            _voiceStatusMessage = status;
-          });
         }
       },
     );
@@ -791,39 +781,7 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
                       ),
                     ),
 
-                  // Hands-Free Voice Control Status Pill Indicator
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: _isRecording ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: _isRecording ? const Color(0xFFFCA5A5) : const Color(0xFFBFDBFE),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isRecording ? Icons.fiber_manual_record_rounded : Icons.mic_rounded,
-                          size: 18,
-                          color: _isRecording ? const Color(0xFFEF4444) : const Color(0xFF2563EB),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _isRecording
-                              ? '🔴 Recording...'
-                              : _voiceStatusMessage,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: _isRecording ? const Color(0xFF991B1B) : const Color(0xFF1E40AF),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+
 
                   if (_recordedFile != null || _isFetchingLocation) ...[
                     // Post-recording actions (Re-record / Upload API)
