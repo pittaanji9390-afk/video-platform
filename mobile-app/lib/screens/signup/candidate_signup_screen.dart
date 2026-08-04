@@ -59,7 +59,8 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
   bool get _hasMinLength => _currentPassword.length >= 6;
   bool get _hasLetter => RegExp(r'[a-zA-Z]').hasMatch(_currentPassword);
   bool get _hasNumber => RegExp(r'[0-9]').hasMatch(_currentPassword);
-  bool get _isPasswordValid => _hasMinLength && _hasLetter && _hasNumber;
+  bool get _hasSpecialChar => RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(_currentPassword);
+  bool get _isPasswordValid => _hasMinLength && _hasLetter && _hasNumber && _hasSpecialChar;
 
   Widget _buildPasswordRequirements() {
     final showRequirements = _isPasswordFocused || _currentPassword.isNotEmpty;
@@ -105,6 +106,8 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
           _buildRequirementItem('At least 1 letter (a-z, A-Z)', _hasLetter),
           const SizedBox(height: 4),
           _buildRequirementItem('At least 1 number (0-9)', _hasNumber),
+          const SizedBox(height: 4),
+          _buildRequirementItem(r'At least 1 special character (!@#$%^&*)', _hasSpecialChar),
         ],
       ),
     );
@@ -353,6 +356,9 @@ class _CandidateSignupScreenState extends State<CandidateSignupScreen> {
                     }
                     if (!RegExp(r'[0-9]').hasMatch(val)) {
                       return 'Password must contain at least 1 number';
+                    }
+                    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(val)) {
+                      return 'Password must contain at least 1 special character';
                     }
                     return null;
                   },

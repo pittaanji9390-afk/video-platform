@@ -2621,208 +2621,138 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         {'name': 'QC Evaluator', 'email': 'qc@gmail.com'},
       ];
     }
-    String selectedReviewer = '${availableMembers.first['name']} (${availableMembers.first['email']})';
-    String assignMode = 'auto_divide';
 
     final pendingUnassigned = _qcSubmissions.where((v) {
       final status = v['status'] ?? '';
       final assigned = v['assigned_qc'] ?? '';
-      return status != 'Approved' && status != 'Final Approved' && status != 'Rejected' && (assigned.isEmpty || assigned == 'Unassigned');
+      return status != 'Approved' && status != 'Final Approved' && status != 'Rejected' && (assigned.isEmpty || assigned == 'Unassigned' || assigned.contains('Unassigned'));
     }).toList();
-
-    final allPending = _qcSubmissions.where((v) {
-      final status = v['status'] ?? '';
-      return status != 'Approved' && status != 'Final Approved' && status != 'Rejected';
-    }).toList();
-
-    String selectedVideoId = allPending.isNotEmpty ? (allPending.first['id']?.toString() ?? '') : '';
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: const [
-              Icon(Icons.assignment_ind_rounded, color: Color(0xFF7C3AED), size: 24),
-              SizedBox(width: 8),
-              Text('Assign QC Tickets', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Assignment Strategy:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-                const SizedBox(height: 6),
-                RadioListTile<String>(
-                  value: 'auto_divide',
-                  groupValue: assignMode,
-                  title: Text('⚡ Auto-Divide & Assign (${pendingUnassigned.length} Tickets)', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
-                  subtitle: Text('Splits unassigned pending videos equally across all ${availableMembers.length} QC team members', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  activeColor: const Color(0xFF7C3AED),
-                  onChanged: (val) => setModalState(() => assignMode = val!),
-                ),
-                RadioListTile<String>(
-                  value: 'unassigned',
-                  groupValue: assignMode,
-                  title: Text('Assign Unassigned to Single Reviewer (${pendingUnassigned.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Assign all unassigned pending tickets to 1 specific QC reviewer', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  activeColor: const Color(0xFF7C3AED),
-                  onChanged: (val) => setModalState(() => assignMode = val!),
-                ),
-                RadioListTile<String>(
-                  value: 'all',
-                  groupValue: assignMode,
-                  title: Text('All Pending Tickets (${allPending.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Re-assign all active pending submissions to 1 reviewer', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  activeColor: const Color(0xFF7C3AED),
-                  onChanged: (val) => setModalState(() => assignMode = val!),
-                ),
-                if (assignMode != 'auto_divide') ...[
-                  const SizedBox(height: 12),
-                  const Text('Select Target QC Reviewer:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    value: selectedReviewer,
-                    dropdownColor: Colors.white,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                    items: availableMembers.map((m) {
-                      final label = '${m['name']} (${m['email']})';
-                      return DropdownMenuItem<String>(
-                        value: label,
-                        child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A))),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setModalState(() => selectedReviewer = val);
-                      }
-                    },
-                  ),
-                ],
-                if (allPending.isNotEmpty && assignMode != 'auto_divide') ...[
-                  RadioListTile<String>(
-                    value: 'specific',
-                    groupValue: assignMode,
-                    title: const Text('Select Specific Submission Ticket', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    activeColor: const Color(0xFF7C3AED),
-                    onChanged: (val) => setModalState(() => assignMode = val!),
-                  ),
-                  if (assignMode == 'specific') ...[
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      value: selectedVideoId,
-                      dropdownColor: Colors.white,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      ),
-                      items: allPending.map((v) {
-                        final id = v['id']?.toString() ?? v['raw_id']?.toString() ?? 'Ticket';
-                        final title = v['title'] ?? v['task_name'] ?? 'Video Submission';
-                        final label = '$id — $title';
-                        return DropdownMenuItem<String>(
-                          value: id,
-                          child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF0F172A))),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() => selectedVideoId = val);
-                        }
-                      },
-                    ),
-                  ],
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(ctx);
-                int count = 0;
-                setState(() {
-                  if (assignMode == 'auto_divide') {
-                    int memberIdx = 0;
-                    for (var item in _qcSubmissions) {
-                      final status = item['status'] ?? '';
-                      final assigned = item['assigned_qc'] ?? '';
-                      if (status != 'Approved' && status != 'Final Approved' && status != 'Rejected' && (assigned.isEmpty || assigned == 'Unassigned' || assigned.contains('Unassigned'))) {
-                        final assignedMember = availableMembers[memberIdx % availableMembers.length];
-                        item['assigned_qc'] = '${assignedMember['name']} (${assignedMember['email']})';
-                        item['status'] = 'In Review';
-                        item['assigned_at'] = DateTime.now().toIso8601String();
-                        memberIdx++;
-                        count++;
-                      }
-                    }
-                  } else {
-                    for (var item in _qcSubmissions) {
-                      final status = item['status'] ?? '';
-                      final assigned = item['assigned_qc'] ?? '';
-                      if (status != 'Approved' && status != 'Final Approved' && status != 'Rejected') {
-                        if (assignMode == 'unassigned' && (assigned.isEmpty || assigned == 'Unassigned' || assigned.contains('Unassigned'))) {
-                          item['assigned_qc'] = selectedReviewer;
-                          item['status'] = 'In Review';
-                          item['assigned_at'] = DateTime.now().toIso8601String();
-                          count++;
-                        } else if (assignMode == 'all') {
-                          item['assigned_qc'] = selectedReviewer;
-                          item['status'] = 'In Review';
-                          item['assigned_at'] = DateTime.now().toIso8601String();
-                          count++;
-                        } else if (assignMode == 'specific' && (item['id']?.toString() == selectedVideoId || item['raw_id']?.toString() == selectedVideoId)) {
-                          item['assigned_qc'] = selectedReviewer;
-                          item['status'] = 'In Review';
-                          item['assigned_at'] = DateTime.now().toIso8601String();
-                          count++;
-                        }
-                      }
-                    }
-                  }
-                });
-
-                final msg = assignMode == 'auto_divide'
-                    ? '⚡ Auto-divided and assigned $count ticket(s) evenly across ${availableMembers.length} QC members!'
-                    : (count > 0 ? 'Successfully assigned $count ticket(s) to $selectedReviewer!' : 'No eligible tickets found to assign.');
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(msg),
-                    backgroundColor: count > 0 ? const Color(0xFF7C3AED) : const Color(0xFFF59E0B),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-              icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-              label: const Text('Assign Tickets', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7C3AED),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.bolt_rounded, color: Color(0xFF7C3AED), size: 26),
+            SizedBox(width: 8),
+            Text('Auto-Divide & Assign', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3E8FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFDDD6FE)),
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('⚡ Equal Workload Distribution', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF6B21A8))),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Splits all unassigned pending videos equally across all ${availableMembers.length} active QC team members.',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF581C87), height: 1.3),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('Pending Tickets', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                        const SizedBox(height: 2),
+                        Text('${pendingUnassigned.length}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('QC Members', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                        const SizedBox(height: 2),
+                        Text('${availableMembers.length}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              int count = 0;
+              setState(() {
+                int memberIdx = 0;
+                for (var item in _qcSubmissions) {
+                  final status = item['status'] ?? '';
+                  final assigned = item['assigned_qc'] ?? '';
+                  if (status != 'Approved' && status != 'Final Approved' && status != 'Rejected' && (assigned.isEmpty || assigned == 'Unassigned' || assigned.contains('Unassigned'))) {
+                    final assignedMember = availableMembers[memberIdx % availableMembers.length];
+                    item['assigned_qc'] = '${assignedMember['name']} (${assignedMember['email']})';
+                    item['status'] = 'In Review';
+                    item['assigned_at'] = DateTime.now().toIso8601String();
+                    memberIdx++;
+                    count++;
+                  }
+                }
+              });
+
+              final msg = count > 0
+                  ? '⚡ Auto-divided and assigned $count ticket(s) evenly across ${availableMembers.length} QC members!'
+                  : 'No unassigned pending tickets found to divide.';
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(msg),
+                  backgroundColor: count > 0 ? const Color(0xFF7C3AED) : const Color(0xFFF59E0B),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.bolt_rounded, size: 18, color: Colors.white),
+            label: const Text('Auto-Divide & Assign', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7C3AED),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
       ),
     );
   }
