@@ -405,7 +405,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _activeNavIndex == 0 && _navHistory.isEmpty,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (!didPop) {
+          _goBackToPreviousTab();
+        }
+      },
+      child: Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF8FAFC),
       drawer: _buildAdminSideDrawer(),
@@ -471,8 +478,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ADMIN SIDE MENU DRAWER MATCHING DESIGN SPEC EXACTLY
   Widget _buildAdminSideDrawer() {
@@ -1363,7 +1371,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               children: [
                 Text(v['name'] ?? 'Vendor Company', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
                 const SizedBox(height: 2),
-                Text('Code: ${v['vendor_code']} • Contact: ${v['contact']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                Text('Code: ${v['vendor_code']} • Phone: ${v['phone'] ?? v['contact'] ?? "N/A"}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                 const SizedBox(height: 2),
                 Text('Candidates: ${v['candidates']} • Email: ${v['email']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
               ],
@@ -1468,9 +1476,49 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     );
   }
 
+  /// 24-Hour QC Inactivity Timeout Reclaim
+  void _checkAndReclaimInactiveQCTickets() {
+    final now = DateTime.now();
+    int reclaimedCount = 0;
+
+    for (var item in _qcSubmissions) {
+      final status = item['status'] ?? '';
+      final assignedTo = item['assigned_qc'] ?? '';
+
+      if (status == 'In Review' && assignedTo.isNotEmpty && !assignedTo.startsWith('Unassigned')) {
+        DateTime? assignedAt;
+        if (item['assigned_at'] != null) {
+          assignedAt = DateTime.tryParse(item['assigned_at'].toString());
+        }
+
+        // If assigned > 24h ago (86400 seconds) without QC review completion
+        if (assignedAt != null) {
+          final diff = now.difference(assignedAt);
+          if (diff.inHours >= 24) {
+            item['status'] = 'Pending QC';
+            item['assigned_qc'] = 'Unassigned (24h Timeout Reclaimed)';
+            reclaimedCount++;
+          }
+        }
+      }
+    }
+
+    if (reclaimedCount > 0 && mounted) {
+      _recentActivities.insert(0, {
+        'title': 'QC Ticket Timeout Reclaimed',
+        'subtitle': 'Reclaimed $reclaimedCount inactive tickets back to QC Queue (24h timeout)',
+        'time': 'Just now',
+        'icon': Icons.timer_off_rounded,
+        'color': const Color(0xFFEF4444),
+        'read': false,
+      });
+    }
+  }
+
   // TAB 3: QC QUEUE TAB (Pending & In-Review Queue)
   Widget _buildQCQueueTab() {
-    final pendingItems = _qcSubmissions.where((item) => (item['status'] ?? '') != 'Approved').toList();
+    _checkAndReclaimInactiveQCTickets();
+    final pendingItems = _qcSubmissions.where((item) => (item['status'] ?? '') != 'Approved' && (item['status'] ?? '') != 'Final Approved').toList();
 
     return Container(
       color: const Color(0xFFF8FAFC),
@@ -1579,7 +1627,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
   // TAB 4: QC APPROVED TAB (Verified & Approved Datasets)
   Widget _buildQCApprovedTab() {
-    final approvedItems = _qcSubmissions.where((item) => item['status'] == 'Approved').toList();
+    final approvedItems = _qcSubmissions.where((item) {
+      final s = item['status'] ?? '';
+      return s == 'Approved' || s == 'QC Approved' || s == 'Final Approved';
+    }).toList();
 
     return Container(
       color: const Color(0xFFF8FAFC),
@@ -1634,8 +1685,27 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
   Widget _buildQCCard(Map<String, dynamic> item) {
     final status = item['status'] ?? 'Pending QC';
-    final isApproved = status == 'Approved';
+    final isQCApproved = status == 'QC Approved';
+    final isApproved = status == 'Approved' || status == 'Final Approved';
     final isRejected = status == 'Rejected';
+    final isInReview = status == 'In Review';
+
+    Color statusBg = const Color(0xFFFEF3C7);
+    Color statusFg = const Color(0xFFD97706);
+
+    if (isQCApproved) {
+      statusBg = const Color(0xFFF3E8FF);
+      statusFg = const Color(0xFF7C3AED);
+    } else if (isApproved) {
+      statusBg = const Color(0xFFECFDF5);
+      statusFg = const Color(0xFF059669);
+    } else if (isRejected) {
+      statusBg = const Color(0xFFFEF2F2);
+      statusFg = const Color(0xFFDC2626);
+    } else if (isInReview) {
+      statusBg = const Color(0xFFEFF6FF);
+      statusFg = const Color(0xFF2563EB);
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1643,7 +1713,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: isQCApproved ? const Color(0xFFC084FC) : const Color(0xFFE2E8F0)),
         boxShadow: const [
           BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 2)),
         ],
@@ -1660,17 +1730,13 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isApproved
-                      ? const Color(0xFFECFDF5)
-                      : (isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7)),
+                  color: statusBg,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  status,
+                  isQCApproved ? 'QC Approved (Pending Admin)' : status,
                   style: TextStyle(
-                    color: isApproved
-                        ? const Color(0xFF059669)
-                        : (isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706)),
+                    color: statusFg,
                     fontWeight: FontWeight.bold,
                     fontSize: 11,
                   ),
@@ -1694,7 +1760,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 child: OutlinedButton.icon(
                   onPressed: () => _updateVideoStatus(item['id'], 'Rejected'),
                   icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
-                  label: const Text('Reject', style: TextStyle(color: Color(0xFFDC2626), fontSize: 11, fontWeight: FontWeight.bold)),
+                  label: Text(isQCApproved ? 'Admin Reject' : 'Reject', style: const TextStyle(color: Color(0xFFDC2626), fontSize: 11, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFFCA5A5)),
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1702,27 +1768,29 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _showAssignQCDialog(item['id']),
-                  icon: const Icon(Icons.assignment_ind_rounded, size: 14, color: Color(0xFF7C3AED)),
-                  label: const Text('Assign QC', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFDDD6FE)),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              if (!isQCApproved) ...[
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAssignQCDialog(item['id']),
+                    icon: const Icon(Icons.assignment_ind_rounded, size: 14, color: Color(0xFF7C3AED)),
+                    label: const Text('Assign QC', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFDDD6FE)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(width: 6),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _updateVideoStatus(item['id'], 'Approved'),
-                  icon: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
-                  label: const Text('Approve', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () => _updateVideoStatus(item['id'], 'Final Approved'),
+                  icon: const Icon(Icons.check_circle_rounded, size: 14, color: Colors.white),
+                  label: Text(isQCApproved ? 'Final Approve' : 'Approve', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: isQCApproved ? const Color(0xFF7C3AED) : const Color(0xFF10B981),
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -1768,27 +1836,11 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   controller: _vendorNameCtrl,
                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
-                    labelText: 'Company Name *',
+                    labelText: 'Vendor Name *',
                     labelStyle: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w500),
                     hintText: 'e.g. Acme Vendor Solutions',
                     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                     prefixIcon: const Icon(Icons.business_rounded, color: Color(0xFF2563EB)),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _contactPersonCtrl,
-                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
-                  decoration: InputDecoration(
-                    labelText: 'Contact Person Name',
-                    labelStyle: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w500),
-                    hintText: 'e.g. John Doe',
-                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                    prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF2563EB)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
@@ -2570,17 +2622,17 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       ];
     }
     String selectedReviewer = '${availableMembers.first['name']} (${availableMembers.first['email']})';
-    String assignMode = 'unassigned';
+    String assignMode = 'auto_divide';
 
     final pendingUnassigned = _qcSubmissions.where((v) {
       final status = v['status'] ?? '';
       final assigned = v['assigned_qc'] ?? '';
-      return status != 'Approved' && status != 'Rejected' && (assigned.isEmpty || assigned == 'Unassigned');
+      return status != 'Approved' && status != 'Final Approved' && status != 'Rejected' && (assigned.isEmpty || assigned == 'Unassigned');
     }).toList();
 
     final allPending = _qcSubmissions.where((v) {
       final status = v['status'] ?? '';
-      return status != 'Approved' && status != 'Rejected';
+      return status != 'Approved' && status != 'Final Approved' && status != 'Rejected';
     }).toList();
 
     String selectedVideoId = allPending.isNotEmpty ? (allPending.first['id']?.toString() ?? '') : '';
@@ -2604,36 +2656,23 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Select QC Team Reviewer:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                const Text('Assignment Strategy:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
                 const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  value: selectedReviewer,
-                  dropdownColor: Colors.white,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  items: availableMembers.map((m) {
-                    final label = '${m['name']} (${m['email']})';
-                    return DropdownMenuItem<String>(
-                      value: label,
-                      child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A))),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setModalState(() => selectedReviewer = val);
-                    }
-                  },
+                RadioListTile<String>(
+                  value: 'auto_divide',
+                  groupValue: assignMode,
+                  title: Text('⚡ Auto-Divide & Assign (${pendingUnassigned.length} Tickets)', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                  subtitle: Text('Splits unassigned pending videos equally across all ${availableMembers.length} QC team members', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  activeColor: const Color(0xFF7C3AED),
+                  onChanged: (val) => setModalState(() => assignMode = val!),
                 ),
-                const SizedBox(height: 16),
-                const Text('Assignment Option:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-                const SizedBox(height: 6),
                 RadioListTile<String>(
                   value: 'unassigned',
                   groupValue: assignMode,
-                  title: Text('Unassigned Pending Tickets (${pendingUnassigned.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Assign all tickets currently without a reviewer', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  title: Text('Assign Unassigned to Single Reviewer (${pendingUnassigned.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Assign all unassigned pending tickets to 1 specific QC reviewer', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                   activeColor: const Color(0xFF7C3AED),
@@ -2643,13 +2682,38 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                   value: 'all',
                   groupValue: assignMode,
                   title: Text('All Pending Tickets (${allPending.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Re-assign all active pending submissions to this reviewer', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  subtitle: const Text('Re-assign all active pending submissions to 1 reviewer', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                   activeColor: const Color(0xFF7C3AED),
                   onChanged: (val) => setModalState(() => assignMode = val!),
                 ),
-                if (allPending.isNotEmpty) ...[
+                if (assignMode != 'auto_divide') ...[
+                  const SizedBox(height: 12),
+                  const Text('Select Target QC Reviewer:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: selectedReviewer,
+                    dropdownColor: Colors.white,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    items: availableMembers.map((m) {
+                      final label = '${m['name']} (${m['email']})';
+                      return DropdownMenuItem<String>(
+                        value: label,
+                        child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A))),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() => selectedReviewer = val);
+                      }
+                    },
+                  ),
+                ],
+                if (allPending.isNotEmpty && assignMode != 'auto_divide') ...[
                   RadioListTile<String>(
                     value: 'specific',
                     groupValue: assignMode,
@@ -2698,29 +2762,53 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 Navigator.pop(ctx);
                 int count = 0;
                 setState(() {
-                  for (var item in _qcSubmissions) {
-                    final status = item['status'] ?? '';
-                    final assigned = item['assigned_qc'] ?? '';
-                    if (status != 'Approved' && status != 'Rejected') {
-                      if (assignMode == 'unassigned' && (assigned.isEmpty || assigned == 'Unassigned')) {
-                        item['assigned_qc'] = selectedReviewer;
+                  if (assignMode == 'auto_divide') {
+                    int memberIdx = 0;
+                    for (var item in _qcSubmissions) {
+                      final status = item['status'] ?? '';
+                      final assigned = item['assigned_qc'] ?? '';
+                      if (status != 'Approved' && status != 'Final Approved' && status != 'Rejected' && (assigned.isEmpty || assigned == 'Unassigned' || assigned.contains('Unassigned'))) {
+                        final assignedMember = availableMembers[memberIdx % availableMembers.length];
+                        item['assigned_qc'] = '${assignedMember['name']} (${assignedMember['email']})';
                         item['status'] = 'In Review';
+                        item['assigned_at'] = DateTime.now().toIso8601String();
+                        memberIdx++;
                         count++;
-                      } else if (assignMode == 'all') {
-                        item['assigned_qc'] = selectedReviewer;
-                        item['status'] = 'In Review';
-                        count++;
-                      } else if (assignMode == 'specific' && (item['id']?.toString() == selectedVideoId || item['raw_id']?.toString() == selectedVideoId)) {
-                        item['assigned_qc'] = selectedReviewer;
-                        item['status'] = 'In Review';
-                        count++;
+                      }
+                    }
+                  } else {
+                    for (var item in _qcSubmissions) {
+                      final status = item['status'] ?? '';
+                      final assigned = item['assigned_qc'] ?? '';
+                      if (status != 'Approved' && status != 'Final Approved' && status != 'Rejected') {
+                        if (assignMode == 'unassigned' && (assigned.isEmpty || assigned == 'Unassigned' || assigned.contains('Unassigned'))) {
+                          item['assigned_qc'] = selectedReviewer;
+                          item['status'] = 'In Review';
+                          item['assigned_at'] = DateTime.now().toIso8601String();
+                          count++;
+                        } else if (assignMode == 'all') {
+                          item['assigned_qc'] = selectedReviewer;
+                          item['status'] = 'In Review';
+                          item['assigned_at'] = DateTime.now().toIso8601String();
+                          count++;
+                        } else if (assignMode == 'specific' && (item['id']?.toString() == selectedVideoId || item['raw_id']?.toString() == selectedVideoId)) {
+                          item['assigned_qc'] = selectedReviewer;
+                          item['status'] = 'In Review';
+                          item['assigned_at'] = DateTime.now().toIso8601String();
+                          count++;
+                        }
                       }
                     }
                   }
                 });
+
+                final msg = assignMode == 'auto_divide'
+                    ? '⚡ Auto-divided and assigned $count ticket(s) evenly across ${availableMembers.length} QC members!'
+                    : (count > 0 ? 'Successfully assigned $count ticket(s) to $selectedReviewer!' : 'No eligible tickets found to assign.');
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(count > 0 ? 'Successfully assigned $count ticket(s) to $selectedReviewer!' : 'No eligible tickets found to assign.'),
+                    content: Text(msg),
                     backgroundColor: count > 0 ? const Color(0xFF7C3AED) : const Color(0xFFF59E0B),
                     behavior: SnackBarBehavior.floating,
                   ),

@@ -694,7 +694,16 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _activeTab == 0,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (!didPop) {
+          setState(() {
+            _activeTab = 0;
+          });
+        }
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Column(
@@ -800,8 +809,9 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatCard(String label, String value, Color color, IconData icon) {
     return Expanded(
