@@ -1633,11 +1633,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
 
   Widget _buildStatusMiniTile(String label, String count, Color color, Color bg, [VoidCallback? onTap]) {
     return InkWell(
-      onTap: onTap ?? () {
-        setState(() {
-          _currentTab = 1;
-        });
-      },
+      onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
