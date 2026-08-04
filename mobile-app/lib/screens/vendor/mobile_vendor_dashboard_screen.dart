@@ -1523,8 +1523,6 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                 children: [
                   _buildProfileRow(Icons.storefront_outlined, 'Vendor Name', _vendorName),
                   const Divider(),
-                  _buildProfileRow(Icons.person_outline, 'Contact Person', _vendorContact),
-                  const Divider(),
                   _buildProfileRow(Icons.vpn_key_outlined, 'Vendor Code', referralCode),
                   const Divider(),
                   _buildProfileRow(Icons.email_outlined, 'Email Address', _vendorEmail),
