@@ -126,11 +126,6 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
           _elapsedSeconds++;
         });
 
-        // Ensure voice command listener stays active during recording for "Stop Recording"
-        if (_isRecording) {
-          VoiceCommandService.instance.ensureListening();
-        }
-
         // Auto-stop at 30 minutes and trigger Alert Buzzer modal
         if (_elapsedSeconds >= maxRecordingSeconds) {
           _stopRecording();

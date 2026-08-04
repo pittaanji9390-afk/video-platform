@@ -108,10 +108,13 @@ class VoiceCommandService {
     final cleaned = text.trim().toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
     if (cleaned.isEmpty) return null;
 
-    // Check for Stop variations: "stop", "stop recording", "stop record", "stop video", "please stop", "end recording", "finish recording", "cut", "halt", "done"
+    // Check for Stop variations: "stop", "stop recording", "stop record", "stop video", "please stop", "end recording", "finish recording", "cut", "halt", "done", "pause"
     if (cleaned.contains('stop') || 
+        cleaned.contains('stopp') || 
+        cleaned.contains('top recording') || 
         cleaned.contains('end recording') || 
-        cleaned.contains('finish recording') || 
+        cleaned.contains('finish') || 
+        cleaned.contains('pause') || 
         cleaned == 'cut' || 
         cleaned == 'halt' || 
         cleaned == 'done') {
@@ -151,10 +154,10 @@ class VoiceCommandService {
           }
         },
         listenFor: const Duration(hours: 1),
-        pauseFor: const Duration(seconds: 10),
+        pauseFor: const Duration(seconds: 60),
         partialResults: true,
         cancelOnError: false,
-        listenMode: ListenMode.deviceDefault,
+        listenMode: ListenMode.dictation,
       ).catchError((err) {
         debugPrint('Speech listen catchError: $err');
       });
@@ -166,7 +169,7 @@ class VoiceCommandService {
 
   void _restartListeningIfNeeded() {
     if (_isListening && !kIsWeb) {
-      Future.delayed(const Duration(milliseconds: 200), () {
+      Future.delayed(const Duration(milliseconds: 600), () {
         if (_isListening && !_speechToText.isListening) {
           _startListeningLoop();
         }
