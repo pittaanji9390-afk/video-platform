@@ -94,7 +94,18 @@ class CandidateVideoStore {
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-        final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
+        List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
+
+        if (items.isEmpty && queryParam.isNotEmpty) {
+          try {
+            final fallbackUrl = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.apiVersion}/videos');
+            final fallbackRes = await http.get(fallbackUrl, headers: headers).timeout(const Duration(seconds: 3));
+            if (fallbackRes.statusCode == 200) {
+              final fbBody = jsonDecode(fallbackRes.body);
+              items = fbBody['data'] is List ? fbBody['data'] : (fbBody['data']?['items'] ?? []);
+            }
+          } catch (_) {}
+        }
 
         for (var vid in items) {
           final cId = vid['candidate_id']?.toString() ?? vid['candidateId']?.toString() ?? '';

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/api_constants.dart';
 import 'auth_service.dart';
+import 'candidate_video_store.dart';
 
 class UploadResult {
   final bool isSuccess;
@@ -151,6 +152,14 @@ class UploadService {
             history.add(videoId.toString());
             await prefs.setStringList('uploaded_video_ids', history);
           }
+
+          CandidateVideoStore.saveUploadedVideo({
+            'id': videoId.toString(),
+            'title': '${environmentTag ?? "Recorded"} Dataset Sample',
+            'env': environmentTag ?? 'Kitchen',
+            'status': 'Pending QC',
+            'candidate_id': realUserId,
+          });
         }
 
         onProgress?.call(1.0);
