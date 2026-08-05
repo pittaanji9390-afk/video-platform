@@ -55,7 +55,7 @@ services:
       timeout: 5s
       retries: 3
     volumes:
-      - video_uploads:/app/uploads/videos
+      - ./backend/uploads/videos:/app/uploads/videos
     networks:
       - backend_net
 

@@ -252,6 +252,13 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
           'env_match_score': _envMatchScore,
         }),
       ).timeout(const Duration(seconds: 3));
+
+      // Call physical file delete API when video is rejected
+      if (!isApproved) {
+        final headers = await AuthService.getAuthHeaders();
+        final delUrl = Uri.parse('${ApiConstants.baseUrl}/api/v1/videos/$videoId');
+        await http.delete(delUrl, headers: headers).timeout(const Duration(seconds: 3));
+      }
     } catch (e) {
       debugPrint('Failed to submit QC review scores: $e');
     }
@@ -362,6 +369,51 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
         ),
       );
     }
+  }
+
+  void _confirmAndRejectVideo(Map<String, dynamic> item) {
+    final reason = _rejectReasonCtrl.text.trim();
+    if (reason.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a rejection reason feedback before rejecting.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
+            SizedBox(width: 8),
+            Text('Confirm QC Rejection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Rejecting this video will permanently remove the video file (.mp4) from VPS storage to free up disk space. Rejection reason feedback will be sent to the candidate.\n\nAre you sure you want to proceed?',
+          style: TextStyle(fontSize: 13, color: Color(0xFF334155)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dlgCtx);
+              _submitQCReview(item, false);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete File & Reject'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openQCInspectionModal(Map<String, dynamic> item) {
@@ -499,7 +551,7 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => _submitQCReview(item, false),
+                          onPressed: () => _confirmAndRejectVideo(item),
                           icon: const Icon(Icons.close_rounded, color: Color(0xFFEF4444)),
                           label: const Text('QC Reject', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
                           style: OutlinedButton.styleFrom(

@@ -96,6 +96,22 @@ class QCReviewService {
           color: '#2563EB',
         }).catch(() => {});
       } else {
+        // Physical file deletion from VPS disk on rejection to reclaim storage space
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const vRes = await db.query('SELECT local_path FROM videos WHERE id = $1', [video_id]);
+          if (vRes.rowCount > 0 && vRes.rows[0].local_path) {
+            const fullPath = path.resolve(__dirname, '../../', vRes.rows[0].local_path);
+            if (fs.existsSync(fullPath)) {
+              fs.unlinkSync(fullPath);
+              logger.info('Physical video file deleted from VPS disk on rejection', { video_id, fullPath });
+            }
+          }
+        } catch (fileErr) {
+          logger.warn('Failed to delete physical video file on rejection', { video_id, error: fileErr.message });
+        }
+
         // Notification to Candidate (QC Reject)
         await notificationService.createNotification({
           user_id: video.candidate_id,
