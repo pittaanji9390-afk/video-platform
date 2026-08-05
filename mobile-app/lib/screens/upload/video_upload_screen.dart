@@ -168,6 +168,9 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
           _uploadsHistory.insert(0, newHistoryItem);
         });
 
+        // Persist to CandidateVideoStore local storage
+        CandidateVideoStore.saveUploadedVideo(newHistoryItem);
+
         // Sync to Admin QC Review queue
         if (kIsWeb) {
           try {
