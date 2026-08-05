@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/api_constants.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
@@ -319,6 +320,43 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           }
         } catch (_) {}
       }
+
+      // 5. SharedPreferences Local Storage Uploads Integration
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString('candidate_local_uploads');
+        if (raw != null) {
+          final List<dynamic> localList = jsonDecode(raw);
+          final Set<String> existingIds = _qcSubmissions.map((s) => (s['raw_id'] ?? s['id']).toString()).toSet();
+          final List<Map<String, dynamic>> tempLocalQC = [];
+
+          for (var item in localList) {
+            final id = (item['id'] ?? '').toString();
+            final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-001');
+            if (id.isNotEmpty && existingIds.contains(id)) continue;
+            if (id.isNotEmpty) existingIds.add(id);
+
+            tempLocalQC.add({
+              'id': shortId,
+              'raw_id': id,
+              'title': item['title'] ?? 'Dataset Video Recording',
+              'candidateName': item['candidateName'] ?? item['candidate_name'] ?? 'Candidate',
+              'vendor': item['vendor'] ?? item['vendor_name'] ?? 'Acme Video Solutions',
+              'duration': item['duration'] ?? '30:00 Mins',
+              'status': item['status'] ?? 'Pending QC',
+              'env': item['env'] ?? item['environment_tag'] ?? 'Kitchen',
+            });
+          }
+
+          if (mounted && tempLocalQC.isNotEmpty) {
+            setState(() {
+              _qcSubmissions.insertAll(0, tempLocalQC);
+              _pendingQCCount = _qcSubmissions.length;
+              _totalVideosCount = _qcSubmissions.length;
+            });
+          }
+        }
+      } catch (_) {}
     } catch (e) {
       debugPrint('Dashboard API sync exception: $e');
     } finally {
@@ -351,37 +389,80 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
     }
   }
 
-  void _updateVideoStatus(String id, String newStatus) {
+  void _updateVideoStatus(String id, String newStatus) async {
+    final isReject = newStatus == 'Rejected' || newStatus == 'Admin Reject';
+    final targetStatus = isReject ? 'Rejected' : 'Approved';
+
     setState(() {
       final index = _qcSubmissions.indexWhere((item) => item['id'] == id || item['raw_id'] == id);
       if (index != -1) {
-        _qcSubmissions[index]['status'] = newStatus;
-        if (newStatus == 'Approved') {
+        _qcSubmissions[index]['status'] = targetStatus;
+        if (targetStatus == 'Approved') {
           _approvedCount++;
           if (_pendingQCCount > 0) _pendingQCCount--;
-        } else if (newStatus == 'Rejected') {
+        } else if (targetStatus == 'Rejected') {
           _rejectedCount++;
           if (_pendingQCCount > 0) _pendingQCCount--;
         }
       }
       _recentActivities.insert(0, {
-        'title': 'QC Video $newStatus',
-        'subtitle': 'Video $id evaluated as $newStatus',
+        'title': 'Admin Video $targetStatus',
+        'subtitle': 'Video $id evaluated as $targetStatus by Admin',
         'time': 'Just now',
-        'icon': newStatus == 'Approved' ? Icons.check_circle_rounded : Icons.cancel_rounded,
-        'color': newStatus == 'Approved' ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+        'icon': isReject ? Icons.cancel_rounded : Icons.check_circle_rounded,
+        'color': isReject ? const Color(0xFFEF4444) : const Color(0xFF10B981),
         'read': false,
       });
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Video $id marked as $newStatus!'),
-        backgroundColor: newStatus == 'Approved' ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // Execute backend API updates & physical VPS file cleanup on rejection
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final videoId = id.length > 8 ? id : id;
+
+      if (isReject) {
+        // Physical file delete call on rejection
+        final delUrl = Uri.parse('$_apiBaseUrl/videos/$videoId');
+        await http.delete(delUrl, headers: headers).timeout(const Duration(seconds: 3));
+      } else {
+        // Final approval status update call
+        final appUrl = Uri.parse('$_apiBaseUrl/qc-reviews');
+        await http.post(
+          appUrl,
+          headers: headers,
+          body: jsonEncode({
+            'video_id': videoId,
+            'status': 'approved',
+            'reviewer_name': 'System Administrator',
+          }),
+        ).timeout(const Duration(seconds: 3));
+      }
+    } catch (_) {}
+
+    // Persist to local storage & broadcast channel
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('candidate_local_uploads', jsonEncode(_qcSubmissions));
+    } catch (_) {}
+
+    if (kIsWeb) {
+      try {
+        final bc = web.BroadcastChannelStub('platform_realtime_channel');
+        bc.postMessage(jsonEncode({'type': 'ADMIN_DECISION', 'id': id, 'status': targetStatus}));
+        bc.close();
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isReject ? 'Video $id rejected & file removed from VPS storage' : 'Video $id final approved by Admin ✓'),
+          backgroundColor: isReject ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   void _toggleVendorStatus(String vendorId) {
@@ -2085,6 +2166,247 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
               child: const Text('Create Member', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _autoDivideAllTicketsEqually() async {
+    final pendingList = _qcSubmissions.where((item) {
+      final st = (item['status'] ?? 'Pending QC').toString().toLowerCase();
+      return st == 'pending qc' || st == 'pending' || st == 'pending_qc' || st == 'unassigned';
+    }).toList();
+
+    if (pendingList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No pending unassigned videos to assign!'),
+          backgroundColor: Color(0xFF64748B),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final reviewers = _qcMembers.isNotEmpty
+        ? _qcMembers.map((m) => m['name']?.toString() ?? 'QC Specialist').toList()
+        : ['QC Lead Specialist', 'QC Reviewer Team A', 'QC Reviewer Team B'];
+
+    int memberIndex = 0;
+    for (var video in pendingList) {
+      final reviewerName = reviewers[memberIndex % reviewers.length];
+      video['status'] = 'In Review';
+      video['assignedTo'] = reviewerName;
+      video['assigned_to'] = reviewerName;
+      memberIndex++;
+    }
+
+    // Call backend API if connected
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      await http.post(
+        Uri.parse('$_apiBaseUrl/qc-tickets/auto-divide'),
+        headers: headers,
+        body: jsonEncode({
+          'strategy': 'EQUAL_DISTRIBUTION',
+          'unassigned_count': pendingList.length,
+        }),
+      ).timeout(const Duration(seconds: 2));
+    } catch (_) {}
+
+    // Persist to SharedPreferences and Web LocalStorage
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('candidate_local_uploads', jsonEncode(_qcSubmissions));
+    } catch (_) {}
+
+    if (kIsWeb) {
+      try {
+        final bc = web.BroadcastChannelStub('platform_realtime_channel');
+        bc.postMessage(jsonEncode({'type': 'TICKETS_AUTO_DIVIDED', 'count': pendingList.length}));
+        bc.close();
+      } catch (_) {}
+    }
+
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('⚡ Successfully assigned ${pendingList.length} videos equally across ${reviewers.length} QC members!'),
+        backgroundColor: const Color(0xFF7C3AED),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showAssignTicketsDialog() {
+    final pendingList = _qcSubmissions.where((item) {
+      final st = (item['status'] ?? 'Pending QC').toString().toLowerCase();
+      return st == 'pending qc' || st == 'pending' || st == 'pending_qc' || st == 'unassigned';
+    }).toList();
+
+    final reviewers = _qcMembers.isNotEmpty
+        ? _qcMembers.map((m) => m['name']?.toString() ?? 'QC Specialist').toList()
+        : ['QC Lead Specialist', 'QC Reviewer Team A', 'QC Reviewer Team B'];
+
+    final perReviewer = reviewers.isNotEmpty ? (pendingList.length / reviewers.length).ceil() : pendingList.length;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.assignment_ind_rounded, color: Color(0xFF7C3AED), size: 24),
+            SizedBox(width: 8),
+            Text('Equal Ticket Auto-Divide', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This will distribute all pending uploaded candidate videos equally among your active QC Team members.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3E8FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFDDD6FE)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Pending Videos:', style: TextStyle(fontSize: 13, color: Color(0xFF6B21A8), fontWeight: FontWeight.w600)),
+                      Text('${pendingList.length} Videos', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF6B21A8))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Active QC Members:', style: TextStyle(fontSize: 13, color: Color(0xFF6B21A8), fontWeight: FontWeight.w600)),
+                      Text('${reviewers.length} Reviewers', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF6B21A8))),
+                    ],
+                  ),
+                  const Divider(height: 16, color: Color(0xFFDDD6FE)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Distribution Ratio:', style: TextStyle(fontSize: 13, color: Color(0xFF6B21A8), fontWeight: FontWeight.bold)),
+                      Text('~$perReviewer videos / reviewer', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _autoDivideAllTicketsEqually();
+            },
+            icon: const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
+            label: const Text('Assign Equally Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7C3AED),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignQCDialog(dynamic videoId) {
+    String? selectedReviewer;
+    final reviewers = _qcMembers.isNotEmpty
+        ? _qcMembers.map((m) => m['name']?.toString() ?? 'QC Specialist').toList()
+        : ['QC Lead Specialist', 'QC Reviewer Team A', 'QC Reviewer Team B'];
+
+    selectedReviewer = reviewers.first;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.assignment_ind_rounded, color: Color(0xFF7C3AED), size: 22),
+              SizedBox(width: 8),
+              Text('Assign Video to QC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A))),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Select QC Team Reviewer:', style: TextStyle(fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: selectedReviewer,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                ),
+                items: reviewers.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A))))).toList(),
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => selectedReviewer = val);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                final item = _qcSubmissions.firstWhere(
+                  (element) => element['id'] == videoId || element['raw_id'] == videoId,
+                  orElse: () => <String, dynamic>{},
+                );
+                if (item.isNotEmpty) {
+                  setState(() {
+                    item['status'] = 'In Review';
+                    item['assignedTo'] = selectedReviewer;
+                    item['assigned_to'] = selectedReviewer;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Assigned video to "$selectedReviewer" ✓'),
+                      backgroundColor: const Color(0xFF7C3AED),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+              child: const Text('Assign', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),

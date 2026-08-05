@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/web_helper.dart' as web;
 import '../../core/constants/api_constants.dart';
 import '../../config/routes/app_routes.dart';
@@ -185,6 +186,41 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
           debugPrint('LocalStorage QC parse error: $err');
         }
       }
+
+      // Read SharedPreferences candidate_local_uploads for mobile & native updates
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString('candidate_local_uploads');
+        if (raw != null) {
+          final List<dynamic> localList = jsonDecode(raw);
+          for (var item in localList) {
+            final id = (item['id'] ?? '').toString();
+            if (id.isNotEmpty && processedIds.contains(id)) continue;
+            if (id.isNotEmpty) processedIds.add(id);
+
+            final st = (item['status'] ?? 'Pending QC').toString().toLowerCase();
+            final formattedTicket = {
+              'id': id.isNotEmpty ? id : 'TKT-001',
+              'ticket_code': id.isNotEmpty ? id : 'TKT-001',
+              'title': item['title'] ?? 'Candidate Video Recording',
+              'candidate_name': item['candidateName'] ?? item['candidate_name'] ?? 'Candidate',
+              'vendor_name': item['vendor'] ?? item['vendor_name'] ?? 'Acme Video Solutions',
+              'duration': item['duration'] ?? '30:00 Mins',
+              'environment_tag': item['env'] ?? item['environment_tag'] ?? 'Kitchen',
+              'status': st.contains('approve') ? 'qc_approved' : (st.contains('reject') ? 'qc_rejected' : 'pending_qc'),
+              'assigned_to': 'QC Specialist',
+            };
+
+            if (st.contains('approve')) {
+              fetchedApproved.add(formattedTicket);
+            } else if (st.contains('reject')) {
+              fetchedRejected.add(formattedTicket);
+            } else {
+              fetchedPending.add(formattedTicket);
+            }
+          }
+        }
+      } catch (_) {}
 
       if (mounted) {
         setState(() {
