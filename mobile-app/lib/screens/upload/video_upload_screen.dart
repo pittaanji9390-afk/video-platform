@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/device_service.dart';
 import '../../services/upload_service.dart';
 import '../../services/candidate_video_store.dart';
+import '../../services/vosk_voice_command_service.dart';
 import '../../widgets/powered_by_footer.dart';
 
 class VideoUploadScreen extends StatefulWidget {
@@ -46,6 +47,37 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
     _loadCandidateInfo();
     _loadStoredHistory();
     _subscribeRealtime();
+  }
+
+  bool _isListeningVoice = false;
+
+  void _toggleVoiceCommands() async {
+    final service = VoskVoiceCommandService();
+    if (_isListeningVoice) {
+      await service.stopListening();
+      if (mounted) setState(() => _isListeningVoice = false);
+    } else {
+      if (mounted) setState(() => _isListeningVoice = true);
+      await service.startListening(onCommand: (command, rawText) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎙️ Vosk Voice Command: "$rawText"'),
+            backgroundColor: const Color(0xFF7C3AED),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        if (command == 'upload_video') {
+          if (!_isUploading && _activeVideoPath.isNotEmpty) {
+            _startUpload();
+          }
+        } else if (command == 'refresh_queue') {
+          _loadStoredHistory();
+        }
+      });
+    }
   }
 
   Future<void> _loadCandidateInfo() async {
@@ -621,6 +653,18 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
               const PoweredByFooter(),
             ],
           ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _toggleVoiceCommands,
+        backgroundColor: _isListeningVoice ? const Color(0xFFEF4444) : const Color(0xFF7C3AED),
+        icon: Icon(
+          _isListeningVoice ? Icons.mic_rounded : Icons.mic_none_rounded,
+          color: Colors.white,
+        ),
+        label: Text(
+          _isListeningVoice ? 'Listening...' : 'Voice Commands',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
     );
