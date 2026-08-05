@@ -201,7 +201,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
+          : _notifications.isEmpty
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(40),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_none_rounded, size: 54, color: Color(0xFF94A3B8)),
+                      SizedBox(height: 12),
+                      Text('No Notifications Yet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+                      SizedBox(height: 6),
+                      Text('Real-time system and QC approval alerts will appear here.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                )
+              : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _notifications.length,
               itemBuilder: (ctx, idx) {

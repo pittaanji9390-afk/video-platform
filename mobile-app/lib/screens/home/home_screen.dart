@@ -7,6 +7,7 @@ import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../profile/profile_screen.dart';
+import '../upload/video_upload_screen.dart';
 import '../../services/candidate_video_store.dart';
 import '../../widgets/powered_by_footer.dart';
 import '../../utils/web_helper.dart' as web;
@@ -384,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
           ),
           const Placeholder(),
-          const Placeholder(),
+          const VideoUploadScreen(),
           ProfileScreen(
             onBackPressed: () {
               setState(() => _currentTab = 0);

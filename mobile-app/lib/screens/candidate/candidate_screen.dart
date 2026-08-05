@@ -1,8 +1,16 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../config/routes/app_routes.dart';
+import '../../core/constants/api_constants.dart';
 import '../../services/auth_service.dart';
+import '../../services/candidate_video_store.dart';
+import '../../utils/web_helper.dart' as web;
 import '../notifications/notifications_screen.dart';
 import '../profile/profile_screen.dart';
+import '../upload/video_upload_screen.dart';
 
 class CandidateScreen extends StatefulWidget {
   const CandidateScreen({super.key});
@@ -27,7 +35,7 @@ class _CandidateScreenState extends State<CandidateScreen> {
         children: [
           const CandidateDashboardTab(),
           const Placeholder(), // Record tab triggers camera
-          const Placeholder(), // Uploads tab
+          const VideoUploadScreen(), // Uploads tab
           const NotificationsScreen(),
           ProfileScreen(
             onBackPressed: () {
@@ -90,6 +98,14 @@ class CandidateDashboardTab extends StatefulWidget {
 
 class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
   String _candidateName = 'Candidate';
+  String _candidateId = '';
+  int _totalUploaded = 0;
+  String _hoursCollectedStr = '00:00';
+  int _pendingQcCount = 0;
+  int _approvedCount = 0;
+  int _rejectedCount = 0;
+  List<Map<String, dynamic>> _myUploads = [];
+  bool _isLoading = true;
 
   Future<void> _navigateToEnvironmentThenCamera() async {
     await Navigator.pushNamed(context, AppRoutes.environmentTag);
@@ -98,18 +114,92 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
   @override
   void initState() {
     super.initState();
-    _loadCandidateName();
+    _loadDynamicCandidateData();
+    _subscribeRealtime();
   }
 
-  Future<void> _loadCandidateName() async {
+  void _subscribeRealtime() {
+    if (kIsWeb) {
+      try {
+        final bc = web.BroadcastChannelStub('platform_realtime_channel');
+        bc.onMessage.listen((event) {
+          if (mounted) _loadDynamicCandidateData();
+        });
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _loadDynamicCandidateData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
     try {
       final session = await AuthService.restoreSession();
-      if (session != null && mounted) {
-        setState(() {
-          _candidateName = session['name'] ?? 'Candidate';
-        });
+      if (session != null) {
+        _candidateName = session['name'] ?? session['username'] ?? 'Candidate';
+        _candidateId = session['id'] ?? '';
       }
-    } catch (_) {}
+
+      // Fetch uploaded videos list dynamically
+      final videos = await CandidateVideoStore.getUploadedVideos();
+      _myUploads = List<Map<String, dynamic>>.from(videos);
+
+      // Fetch live candidate dashboard stats from API
+      try {
+        final headers = await AuthService.getAuthHeaders();
+        final url = Uri.parse('${ApiConstants.baseUrl}/api/v1/videos/candidate-stats?candidate_id=$_candidateId');
+        final res = await http.get(url, headers: headers).timeout(const Duration(seconds: 3));
+
+        if (res.statusCode == 200) {
+          final body = jsonDecode(res.body);
+          final data = body['data'] ?? {};
+          _totalUploaded = data['total_uploaded'] ?? _myUploads.length;
+          _pendingQcCount = data['pending_qc'] ?? 0;
+          _approvedCount = (data['qc_approved'] ?? 0) + (data['approved'] ?? 0);
+          _rejectedCount = (data['qc_rejected'] ?? 0) + (data['rejected'] ?? 0);
+
+          final totalMinutes = _totalUploaded * 30; // 30 mins per recording
+          final hrs = (totalMinutes ~/ 60).toString().padLeft(2, '0');
+          final mins = (totalMinutes % 60).toString().padLeft(2, '0');
+          _hoursCollectedStr = '$hrs:$mins';
+        } else {
+          _computeFallbackStats();
+        }
+      } catch (_) {
+        _computeFallbackStats();
+      }
+    } catch (e) {
+      debugPrint('Dynamic candidate data error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _computeFallbackStats() {
+    _totalUploaded = _myUploads.length;
+    int pending = 0;
+    int approved = 0;
+    int rejected = 0;
+    for (var u in _myUploads) {
+      final st = (u['status'] ?? '').toString().toLowerCase();
+      if (st.contains('reject')) {
+        rejected++;
+      } else if (st.contains('approve')) {
+        approved++;
+      } else {
+        pending++;
+      }
+    }
+    _pendingQcCount = pending;
+    _approvedCount = approved;
+    _rejectedCount = rejected;
+
+    final totalMinutes = _totalUploaded * 30;
+    final hrs = (totalMinutes ~/ 60).toString().padLeft(2, '0');
+    final mins = (totalMinutes % 60).toString().padLeft(2, '0');
+    _hoursCollectedStr = '$hrs:$mins';
   }
 
   @override
@@ -200,9 +290,12 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
                     topRight: Radius.circular(28),
                   ),
                 ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(20.0),
+                child: RefreshIndicator(
+                  onRefresh: _loadDynamicCandidateData,
+                  color: const Color(0xFF2563EB),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -239,8 +332,9 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
       ),
     );
   }
@@ -263,13 +357,24 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Today's Progress",
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Today's Progress",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              if (_isLoading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(
@@ -295,41 +400,13 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          const Text(
-                            '12',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.arrow_upward, size: 12, color: Color(0xFF166534)),
-                                SizedBox(width: 2),
-                                Text(
-                                  '20%',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF166534),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '$_totalUploaded',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                     ],
                   ),
@@ -358,41 +435,13 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          const Text(
-                            '05:30',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.arrow_upward, size: 12, color: Color(0xFF166534)),
-                                SizedBox(width: 2),
-                                Text(
-                                  '15%',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF166534),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Text(
+                        _hoursCollectedStr,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                     ],
                   ),
@@ -400,185 +449,151 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+
+          // Mini Status Breakdown Bar
+          Row(
+            children: [
+              _buildMiniStatusChip('🟡 Pending: $_pendingQcCount', const Color(0xFFFEF3C7), const Color(0xFFD97706)),
+              const SizedBox(width: 6),
+              _buildMiniStatusChip('🟢 Approved: $_approvedCount', const Color(0xFFDCFCE7), const Color(0xFF166534)),
+              const SizedBox(width: 6),
+              _buildMiniStatusChip('🔴 Rejected: $_rejectedCount', const Color(0xFFFEE2E2), const Color(0xFF991B1B)),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActionsGrid(BuildContext context) {
-    final actions = [
-      {
-        'title': 'Start Recording',
-        'icon': Icons.videocam_rounded,
-        'bgColor': const Color(0xFFFEE2E2),
-        'iconColor': const Color(0xFFEF4444),
-        'onTap': () => _navigateToEnvironmentThenCamera(),
-      },
-      {
-        'title': 'Upload History',
-        'icon': Icons.description_rounded,
-        'bgColor': const Color(0xFFDCFCE7),
-        'iconColor': const Color(0xFF22C55E),
-        'onTap': () => Navigator.pushNamed(context, AppRoutes.uploadVideo),
-      },
-      {
-        'title': 'Help Center',
-        'icon': Icons.help_outline_rounded,
-        'bgColor': const Color(0xFFFFEDD5),
-        'iconColor': const Color(0xFFF97316),
-        'onTap': () => _showHelpModal(context),
-      },
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: actions.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: 1.25,
-      ),
-      itemBuilder: (context, index) {
-        final act = actions[index];
-        return InkWell(
-          onTap: act['onTap'] as VoidCallback,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: act['bgColor'] as Color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    act['icon'] as IconData,
-                    color: act['iconColor'] as Color,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  act['title']?.toString() ?? '',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Widget _buildMiniStatusChip(String label, Color bg, Color text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: text)),
     );
   }
 
   Widget _buildRecentActivityCard() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Video Thumbnail Box
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              width: 54,
-              height: 54,
-              color: const Color(0xFFE2E8F0),
-              child: const Icon(
-                Icons.soup_kitchen_rounded,
-                color: Color(0xFF64748B),
-                size: 28,
+    if (_myUploads.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.video_library_outlined, size: 36, color: Color(0xFF94A3B8)),
+            SizedBox(height: 8),
+            Text('No Recordings Yet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+            SizedBox(height: 4),
+            Text('Tap "Start Recording" to capture candidate video clips.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _myUploads.length > 3 ? 3 : _myUploads.length,
+      itemBuilder: (ctx, i) {
+        final item = _myUploads[i];
+        final title = item['title'] ?? item['video_title'] ?? 'Video Recording';
+        final timeStr = item['date'] ?? item['time'] ?? 'Just now';
+        final statusStr = item['status']?.toString() ?? 'Pending QC';
+        final isApproved = statusStr.toLowerCase().contains('approve');
+        final isRejected = statusStr.toLowerCase().contains('reject');
+
+        Color statusBg = const Color(0xFFFEF3C7);
+        Color statusColor = const Color(0xFFD97706);
+
+        if (isApproved) {
+          statusBg = const Color(0xFFDCFCE7);
+          statusColor = const Color(0xFF166534);
+        } else if (isRejected) {
+          statusBg = const Color(0xFFFEE2E2);
+          statusColor = const Color(0xFF991B1B);
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFF1F5F9)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 14),
-
-          // Video Title & Upload Time
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Kitchen Video',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  color: const Color(0xFFEFF6FF),
+                  child: const Icon(
+                    Icons.videocam_rounded,
+                    color: Color(0xFF2563EB),
+                    size: 24,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  '2 min ago',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                  ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      timeStr,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          // Uploaded Check Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCFCE7),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.check_circle_rounded,
-                  size: 14,
-                  color: Color(0xFF166534),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                SizedBox(width: 4),
-                Text(
-                  'Uploaded',
+                child: Text(
+                  statusStr,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF166534),
+                    color: statusColor,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
