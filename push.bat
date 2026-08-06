@@ -2,7 +2,7 @@
 echo ========================================================
 echo   🚀 Video Platform - One-Click Git Push ^& APK Release
 echo ========================================================
-cd /d "C:\Users\anjin\Downloads\video-final app\video-platform"
+cd /d "%~dp0"
 
 echo.
 echo [1/3] Staging changes...
