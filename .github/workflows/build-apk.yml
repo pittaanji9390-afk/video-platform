@@ -4,6 +4,8 @@ name: 🤖 Build Android APK
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   workflow_dispatch:           # Manual trigger — click "Run workflow" in GitHub Actions tab
     inputs:
       build_type:
@@ -130,7 +132,7 @@ jobs:
 
       # ── 9. Create GitHub Release (only on push to main) ───────────────
       - name: 🏷️ Create GitHub Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
