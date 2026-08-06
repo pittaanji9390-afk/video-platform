@@ -155,6 +155,6 @@ jobs:
             mobile-app/build/app/outputs/flutter-apk/app-release.apk
             mobile-app/build/app/outputs/flutter-apk/app-debug.apk
           draft: false
-          prerelease: false
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
