@@ -75,7 +75,10 @@ class VideoController {
         });
       }
 
-      const { video_id, candidate_id, vendor_id } = req.body || {};
+      // Extract authenticated candidate & vendor IDs from JWT session
+      const candidate_id = req.user?.id || req.body?.candidate_id;
+      const vendor_id = req.user?.vendor_id || req.body?.vendor_id;
+      const { video_id, environment_tag, title } = req.body || {};
       const file = req.file;
 
       // Step 1: Upload video metadata and file
@@ -84,6 +87,8 @@ class VideoController {
         candidate_id,
         vendor_id,
         file,
+        environment_tag,
+        title,
       });
 
       // Step 2: Post-upload security processing (EXIF stripping + watermark)

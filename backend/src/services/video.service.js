@@ -68,25 +68,6 @@ class VideoService {
   async uploadVideo({ video_id, candidate_id, vendor_id, file, environment_tag, title }) {
     const relativePath = path.join('uploads', 'videos', file.filename || file.originalname).replace(/\\/g, '/');
     try {
-      // 1. Fetch valid candidate and vendor IDs from database if omitted or synthetic
-      let validCandidateId = candidate_id;
-      let validVendorId = vendor_id;
-
-      if (!validCandidateId || validCandidateId === 'CAN-2024-001' || validCandidateId === 'c1000000-0000-0000-0000-000000000001') {
-        const candRes = await db.query('SELECT id, vendor_id FROM candidates WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
-        if (candRes.rowCount > 0) {
-          validCandidateId = candRes.rows[0].id;
-          validVendorId = candRes.rows[0].vendor_id;
-        }
-      }
-
-      if (!validVendorId) {
-        const venRes = await db.query('SELECT id FROM vendors WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
-        if (venRes.rowCount > 0) {
-          validVendorId = venRes.rows[0].id;
-        }
-      }
-
       let videoRecord;
       if (video_id && !video_id.startsWith('vid-')) {
         const updateQuery = `
@@ -104,8 +85,8 @@ class VideoService {
         `;
         const videoTitle = title || `${environment_tag || "Recorded"} Dataset Video`;
         const result = await db.query(insertQuery, [
-          validCandidateId || '20000000-0000-4000-8000-000000000001',
-          validVendorId || '10000000-0000-4000-8000-000000000001',
+          candidate_id,
+          vendor_id,
           videoTitle,
           file.originalname || file.filename,
           relativePath,

@@ -94,25 +94,14 @@ class CandidateVideoStore {
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-        List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
-
-        if (items.isEmpty && queryParam.isNotEmpty) {
-          try {
-            final fallbackUrl = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.apiVersion}/videos');
-            final fallbackRes = await http.get(fallbackUrl, headers: headers).timeout(const Duration(seconds: 3));
-            if (fallbackRes.statusCode == 200) {
-              final fbBody = jsonDecode(fallbackRes.body);
-              items = fbBody['data'] is List ? fbBody['data'] : (fbBody['data']?['items'] ?? []);
-            }
-          } catch (_) {}
-        }
+        final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
 
         for (var vid in items) {
           final cId = vid['candidate_id']?.toString() ?? vid['candidateId']?.toString() ?? '';
           final cEmail = vid['email']?.toString() ?? '';
 
-          // Candidate Scoping: verify owner matches logged-in user if specific ID provided
-          if (cId.isNotEmpty && currentUserId.isNotEmpty && !currentUserId.startsWith('CAN-') && currentUserId != 'c1000000-0000-0000-0000-000000000001') {
+          // Strict Candidate Scoping: candidate loads only their own uploaded videos
+          if (currentUserId.isNotEmpty && cId.isNotEmpty) {
             if (cId.toLowerCase() != currentUserId.toLowerCase()) {
               final cEmailLower = cEmail.toLowerCase();
               final curEmailLower = currentUserEmail.toLowerCase();
