@@ -102,29 +102,33 @@ class VoiceCommandService {
     }
   }
 
-  /// Match voice input strictly against "Start", "Start Recording", "Stop", "Stop Recording", ignoring all other speech
+  /// Match voice input against "Start Recording" & "Stop Recording", ignoring all other speech
   VoiceCommand? _matchCommand(String text) {
-    // Strip punctuation marks and extra whitespace
+    // Strip punctuation marks to prevent "stop.", "stop!", "stop recording!" matching failures
     final cleaned = text.trim().toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
     if (cleaned.isEmpty) return null;
 
-    // Strict Stop commands: "stop", "stop recording"
-    if (cleaned == 'stop' || 
-        cleaned == 'stop recording' || 
-        cleaned.endsWith(' stop recording') || 
-        cleaned.endsWith(' stop')) {
+    // Check for Stop variations: "stop", "stop recording", "stop record", "stop video", "please stop", "end recording", "finish recording", "cut", "halt", "done", "pause"
+    if (cleaned.contains('stop') || 
+        cleaned.contains('stopp') || 
+        cleaned.contains('top recording') || 
+        cleaned.contains('end recording') || 
+        cleaned.contains('finish') || 
+        cleaned.contains('pause') || 
+        cleaned == 'cut' || 
+        cleaned == 'halt' || 
+        cleaned == 'done') {
       return VoiceCommand.stop;
     }
 
-    // Strict Start commands: "start", "start recording"
-    if (cleaned == 'start' || 
-        cleaned == 'start recording' || 
-        cleaned.endsWith(' start recording') || 
-        cleaned.endsWith(' start')) {
+    // Check for Start variations: "start", "start recording", "start record", "begin recording", "action"
+    if (cleaned.contains('start') || 
+        cleaned.contains('begin') || 
+        cleaned.contains('action')) {
       return VoiceCommand.start;
     }
 
-    // Ignore ALL other speech and noise
+    // Ignore all other speech
     return null;
   }
 

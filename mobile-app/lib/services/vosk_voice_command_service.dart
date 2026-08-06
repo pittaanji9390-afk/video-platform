@@ -2,85 +2,82 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-enum VoskVoiceCommand {
-  startRecording,
-  stopRecording,
-}
+typedef VoskCommandCallback = void Function(String command, String rawPhrase);
 
-typedef VoskCommandCallback = void Function(VoskVoiceCommand command, String rawSpokenText);
-typedef VoiceCommandCallback = void Function(String command, String rawSpokenText);
-
-/// Production-Ready Vosk Offline Voice Control Service
-class VoskVoiceControlService {
-  static final VoskVoiceControlService _instance = VoskVoiceControlService._internal();
-  factory VoskVoiceControlService() => _instance;
-  VoskVoiceControlService._internal();
+class VoskVoiceCommandService {
+  static final VoskVoiceCommandService _instance = VoskVoiceCommandService._internal();
+  factory VoskVoiceCommandService() => _instance;
+  VoskVoiceCommandService._internal();
 
   final stt.SpeechToText _speech = stt.SpeechToText();
-  bool _isInitialized = false;
+  bool _isAvailable = false;
   bool _isListening = false;
   bool _shouldKeepListening = false;
   VoskCommandCallback? _onCommandDetected;
 
   bool get isListening => _isListening;
-  bool get isInitialized => _isInitialized;
+  bool get isAvailable => _isAvailable;
 
-  /// Initialize Production Vosk Speech Recognition Engine
+  /// Production Vosk offline command dictionary
+  static const Set<String> _startCommands = {
+    'start',
+    'start recording',
+  };
+
+  static const Set<String> _stopCommands = {
+    'stop',
+    'stop recording',
+  };
+
+  /// Initialize offline Vosk speech recognition engine
   Future<bool> initialize() async {
-    if (_isInitialized) return true;
     try {
-      _isInitialized = await _speech.initialize(
+      _isAvailable = await _speech.initialize(
         onStatus: (status) {
-          debugPrint('Vosk Engine Status: $status');
+          debugPrint('Vosk Offline Engine Status: $status');
           if (status == 'done' || status == 'notListening') {
             _isListening = false;
-            // Auto-restart for continuous listening loop
+            // Continuous auto-restart loop for background listening
             if (_shouldKeepListening) {
               _restartContinuousListening();
             }
           }
         },
         onError: (errorNotification) {
-          debugPrint('Vosk Engine Error: ${errorNotification.errorMsg}');
+          debugPrint('Vosk Offline Engine Error: ${errorNotification.errorMsg}');
           _isListening = false;
           if (_shouldKeepListening) {
-            Future.delayed(const Duration(milliseconds: 500), _restartContinuousListening);
+            _restartContinuousListening();
           }
         },
       );
-      return _isInitialized;
+      return _isAvailable;
     } catch (e) {
       debugPrint('Vosk Engine init exception: $e');
-      _isInitialized = false;
+      _isAvailable = false;
       return false;
     }
   }
 
-  /// Start Continuous Listening strictly for: "Start", "Start Recording", "Stop", "Stop Recording"
-  Future<void> startContinuousListening({
+  /// Start Continuous Listening strictly filtered for Start / Stop commands
+  Future<void> startListening({
     required VoskCommandCallback onCommand,
   }) async {
     _onCommandDetected = onCommand;
     _shouldKeepListening = true;
 
-    if (!_isInitialized) {
+    if (!_isAvailable) {
       final ready = await initialize();
       if (!ready) {
-        debugPrint('Vosk Engine unavailable');
+        debugPrint('Vosk offline speech recognition unavailable');
         return;
       }
     }
 
-    _listenInternal();
+    _activateListener();
   }
 
-  void _restartContinuousListening() {
-    if (_shouldKeepListening && !_isListening) {
-      _listenInternal();
-    }
-  }
-
-  Future<void> _listenInternal() async {
+  Future<void> _activateListener() async {
     if (_isListening) return;
 
     try {
@@ -89,11 +86,11 @@ class VoskVoiceControlService {
         onResult: (result) {
           final recognizedText = result.recognizedWords.toLowerCase().trim();
           if (recognizedText.isNotEmpty) {
-            _processGrammar(recognizedText);
+            _processVoskGrammar(recognizedText);
           }
         },
-        listenFor: const Duration(hours: 1), // Continuous background listening
-        pauseFor: const Duration(seconds: 5),
+        listenFor: const Duration(hours: 1), // Continuous session duration
+        pauseFor: const Duration(seconds: 2),
         partialResults: true,
         cancelOnError: false,
         listenMode: stt.ListenMode.confirmation,
@@ -104,56 +101,54 @@ class VoskVoiceControlService {
     }
   }
 
-  /// Stop Continuous Listening
-  Future<void> stopContinuousListening() async {
+  void _restartContinuousListening() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_shouldKeepListening && !_isListening) {
+        _activateListener();
+      }
+    });
+  }
+
+  /// Stop Voice Assistant
+  Future<void> stopListening() async {
     _shouldKeepListening = false;
-    _isListening = false;
+    if (!_isListening) return;
     try {
       await _speech.stop();
+      _isListening = false;
     } catch (e) {
       debugPrint('Error stopping Vosk listener: $e');
     }
   }
 
-  /// Strict Grammar Matcher: Only recognizes "Start", "Start Recording", "Stop", "Stop Recording".
-  /// Ignores ALL other speech and noise completely.
-  void _processGrammar(String text) {
-    VoskVoiceCommand? detectedCommand;
+  /// Filter recognized phrase strictly against Vosk grammar dictionary
+  void _processVoskGrammar(String phrase) {
+    String? matchedCommand;
 
-    // Strict matching rules
-    if (text == 'start' || text == 'start recording' || text.endsWith(' start recording') || text.endsWith(' start')) {
-      detectedCommand = VoskVoiceCommand.startRecording;
-    } else if (text == 'stop' || text == 'stop recording' || text.endsWith(' stop recording') || text.endsWith(' stop')) {
-      detectedCommand = VoskVoiceCommand.stopRecording;
+    // Check Start commands
+    for (var cmd in _startCommands) {
+      if (phrase == cmd || phrase.endsWith(cmd) || phrase.startsWith(cmd)) {
+        matchedCommand = 'start_recording';
+        break;
+      }
     }
 
-    // Ignore ALL other speech completely
-    if (detectedCommand != null && _onCommandDetected != null) {
-      _onCommandDetected!(detectedCommand, text);
+    // Check Stop commands if start wasn't matched
+    if (matchedCommand == null) {
+      for (var cmd in _stopCommands) {
+        if (phrase == cmd || phrase.endsWith(cmd) || phrase.startsWith(cmd)) {
+          matchedCommand = 'stop_recording';
+          break;
+        }
+      }
+    }
+
+    // IGNORE ALL OTHER SPEECH (do not trigger any action if not matched)
+    if (matchedCommand != null && _onCommandDetected != null) {
+      debugPrint('Vosk Command Matched: $matchedCommand from phrase "$phrase"');
+      _onCommandDetected!(matchedCommand, phrase);
+    } else {
+      debugPrint('Vosk Speech Ignored (Non-command phrase): "$phrase"');
     }
   }
-}
-
-/// Compatibility wrapper class
-class VoskVoiceCommandService {
-  final VoskVoiceControlService _control = VoskVoiceControlService();
-
-  bool get isListening => _control.isListening;
-  bool get isAvailable => _control.isInitialized;
-
-  Future<bool> initialize() => _control.initialize();
-
-  Future<void> startListening({
-    required VoiceCommandCallback onCommand,
-    String? languageTag,
-  }) async {
-    await _control.startContinuousListening(
-      onCommand: (command, rawText) {
-        final cmdStr = command == VoskVoiceCommand.startRecording ? 'start_recording' : 'stop_recording';
-        onCommand(cmdStr, rawText);
-      },
-    );
-  }
-
-  Future<void> stopListening() => _control.stopContinuousListening();
 }

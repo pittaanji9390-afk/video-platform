@@ -62,19 +62,29 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎙️ Vosk Voice Command: "$rawText"'),
-            backgroundColor: const Color(0xFF7C3AED),
+            content: Text('🎙️ Vosk Command: "$rawText" (${command == "start_recording" ? "START RECORDING" : "STOP & SAVE RECORDING"})'),
+            backgroundColor: command == 'start_recording' ? const Color(0xFF10B981) : const Color(0xFFEF4444),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
 
-        if (command == 'upload_video') {
-          if (!_isUploading && _activeVideoPath.isNotEmpty) {
+        if (command == 'start_recording') {
+          // Trigger Start Recording action
+          if (!_isUploading && _activeVideoPath.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('▶️ Starting Video Recording via Vosk Voice Command'),
+                backgroundColor: Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } else if (command == 'stop_recording') {
+          // Trigger Stop Recording & Save action
+          if (_activeVideoPath.isNotEmpty && !_isUploading) {
             _startUpload();
           }
-        } else if (command == 'refresh_queue') {
-          _loadStoredHistory();
         }
       });
     }
