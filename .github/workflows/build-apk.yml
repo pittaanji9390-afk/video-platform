@@ -73,7 +73,7 @@ jobs:
       #    Secrets are set in GitHub → Settings → Secrets → Actions
       #    If secrets are not set, falls back to debug signing automatically
       - name: 🔑 Configure release signing (if secrets exist)
-        if: github.event.inputs.build_type == 'release'
+        if: github.event.inputs.build_type == 'release' || github.event_name == 'push'
         working-directory: mobile-app/android
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
