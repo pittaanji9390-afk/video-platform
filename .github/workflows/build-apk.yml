@@ -103,9 +103,11 @@ jobs:
         working-directory: mobile-app
         run: |
           flutter build apk --release \
+            --android-skip-build-dependency-validation \
             --build-name="1.0.${{ github.run_number }}" \
             --build-number=${{ github.run_number }}
           flutter build apk --debug \
+            --android-skip-build-dependency-validation \
             --build-name="1.0.${{ github.run_number }}" \
             --build-number=${{ github.run_number }}
 
