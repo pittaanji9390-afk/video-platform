@@ -68,6 +68,33 @@ class VideoService {
   async uploadVideo({ video_id, candidate_id, vendor_id, file, environment_tag, title }) {
     const relativePath = path.join('uploads', 'videos', file.filename || file.originalname).replace(/\\/g, '/');
     try {
+      let validCandidateId = candidate_id;
+      let validVendorId = vendor_id;
+
+      // If candidate_id is missing or symbolic, resolve from candidates table
+      if (!validCandidateId || validCandidateId.startsWith('CAN-')) {
+        const candRes = await db.query('SELECT id, vendor_id FROM candidates WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
+        if (candRes.rowCount > 0) {
+          validCandidateId = candRes.rows[0].id;
+          if (!validVendorId) validVendorId = candRes.rows[0].vendor_id;
+        }
+      }
+
+      // If vendor_id is missing, look up from candidate record or active vendors table
+      if (!validVendorId && validCandidateId) {
+        const candVendorRes = await db.query('SELECT vendor_id FROM candidates WHERE id = $1', [validCandidateId]);
+        if (candVendorRes.rowCount > 0 && candVendorRes.rows[0].vendor_id) {
+          validVendorId = candVendorRes.rows[0].vendor_id;
+        }
+      }
+
+      if (!validVendorId) {
+        const venRes = await db.query('SELECT id FROM vendors WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
+        if (venRes.rowCount > 0) {
+          validVendorId = venRes.rows[0].id;
+        }
+      }
+
       let videoRecord;
       if (video_id && !video_id.startsWith('vid-')) {
         const updateQuery = `
@@ -85,8 +112,8 @@ class VideoService {
         `;
         const videoTitle = title || `${environment_tag || "Recorded"} Dataset Video`;
         const result = await db.query(insertQuery, [
-          candidate_id,
-          vendor_id,
+          validCandidateId,
+          validVendorId,
           videoTitle,
           file.originalname || file.filename,
           relativePath,

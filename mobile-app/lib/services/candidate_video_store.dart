@@ -87,7 +87,7 @@ class CandidateVideoStore {
       final currentUserId = session?['id'] ?? '';
       final currentUserEmail = session?['email'] ?? '';
 
-      // 1. Fetch from PostgreSQL REST API
+      // 1. Fetch from PostgreSQL REST API strictly scoped to authenticated candidate
       final queryParam = currentUserId.isNotEmpty ? '?candidate_id=$currentUserId' : '';
       final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.apiVersion}/videos$queryParam');
       final res = await http.get(url, headers: headers).timeout(const Duration(seconds: 3));
@@ -100,12 +100,12 @@ class CandidateVideoStore {
           final cId = vid['candidate_id']?.toString() ?? vid['candidateId']?.toString() ?? '';
           final cEmail = vid['email']?.toString() ?? '';
 
-          // Strict Candidate Scoping: candidate loads only their own uploaded videos
-          if (currentUserId.isNotEmpty && cId.isNotEmpty) {
+          // Strict Candidate Scoping: match candidate ID or email
+          if (cId.isNotEmpty && currentUserId.isNotEmpty) {
             if (cId.toLowerCase() != currentUserId.toLowerCase()) {
               final cEmailLower = cEmail.toLowerCase();
               final curEmailLower = currentUserEmail.toLowerCase();
-              if (curEmailLower.isNotEmpty && cEmailLower.isNotEmpty && cEmailLower != curEmailLower) {
+              if (curEmailLower.isEmpty || cEmailLower != curEmailLower) {
                 continue;
               }
             }

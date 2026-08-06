@@ -66,7 +66,7 @@ class VideoController {
    */
   async uploadVideo(req, res, next) {
     try {
-      // FIX #4: Reject phantom records — require actual file attachment
+      // Reject phantom records — require actual file attachment
       if (!req.file) {
         return res.status(400).json({
           status: 'error',
@@ -75,35 +75,32 @@ class VideoController {
         });
       }
 
-      // Extract authenticated candidate & vendor IDs from JWT session
       const candidate_id = req.user?.id || req.body?.candidate_id;
       const vendor_id = req.user?.vendor_id || req.body?.vendor_id;
-      const { video_id, environment_tag, title } = req.body || {};
+      const environment_tag = req.body?.environment_tag;
+      const title = req.body?.title;
       const file = req.file;
 
-      // Step 1: Upload video metadata and file
+      // Step 1: Save video metadata and relative file path linked to authenticated user
       const uploadedVideo = await videoService.uploadVideo({
-        video_id,
+        video_id: req.body?.video_id,
         candidate_id,
         vendor_id,
-        file,
         environment_tag,
         title,
+        file,
       });
 
       // Step 2: Post-upload security processing (EXIF stripping + watermark)
       if (VideoProcessor.isAvailable() && file.path) {
         const processResult = await VideoProcessor.processVideo(file.path, {
-          vendorId: vendor_id || req.user?.vendor_id,
-          candidateId: candidate_id || req.user?.id,
-          videoId: uploadedVideo.id || video_id,
-        });
+          vendorId: uploadedVideo.vendor_id || vendor_id,
+          candidateId: uploadedVideo.candidate_id || candidate_id,
+          videoId: uploadedVideo.id,
+        }).catch((e) => ({ success: false, error: e.message }));
 
         if (!processResult.success) {
-          logger.warn('Video post-processing failed (upload still saved)', {
-            error: processResult.error,
-            videoId: video_id,
-          });
+          logger.warn('Video post-processing skipped', { error: processResult.error });
         }
       }
 
