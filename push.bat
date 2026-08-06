@@ -19,7 +19,7 @@ git push origin main
 echo.
 echo ========================================================
 echo   ✅ SUCCESS! GitHub Actions is now building your APK.
-echo   🔗 Track Build: https://github.com/pittaanji9390-afk/video-platform/actions
-echo   📦 Download APK: https://github.com/pittaanji9390-afk/video-platform/releases
+echo   🔗 Track Build: https://github.com/Prathyusha-Kothapalli/video-platform/actions
+echo   📦 Download APK: https://github.com/Prathyusha-Kothapalli/video-platform/releases
 echo ========================================================
 pause
