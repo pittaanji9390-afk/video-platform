@@ -197,6 +197,9 @@ class CandidateVideoStore {
             'candidateId': currentUserId,
           });
         }
+      }
+    } catch (_) {}
+
     // 3. Fetch from Web localStorage platform_qc_submissions
     if (kIsWeb) {
       try {
