@@ -32,6 +32,14 @@ class CandidateVideoStore {
     return 0;
   }
 
+  static String formatDurationString(dynamic durVal) {
+    final sec = parseDurationSeconds(durVal);
+    if (sec <= 0) return 'Just Now';
+    final m = (sec ~/ 60).toString().padLeft(2, '0');
+    final s = (sec % 60).toString().padLeft(2, '0');
+    return '$m:$s Mins';
+  }
+
   /// Persist newly uploaded video locally to guarantee immediate UI display
   static Future<void> saveUploadedVideo(Map<String, dynamic> video) async {
     try {
@@ -51,15 +59,18 @@ class CandidateVideoStore {
       // Prevent duplicate entries
       list.removeWhere((item) => (item['id']?.toString() ?? '') == id);
 
+      final durSec = parseDurationSeconds(video['durationSeconds'] ?? video['duration']);
+
       list.insert(0, {
         'id': id,
         'title': video['title'] ?? '${video['env'] ?? 'Kitchen'} Video Recording',
         'env': video['environment_tag'] ?? video['env'] ?? 'Kitchen',
         'status': video['status'] ?? 'Pending QC',
         'date': video['date'] ?? 'Today, Just Now',
-        'size': video['size'] ?? '10.0 MB',
-        'duration': video['duration'] ?? '30:00 Mins',
-        'candidateId': video['candidate_id'] ?? '',
+        'size': video['size'] ?? 'N/A',
+        'duration': formatDurationString(durSec),
+        'durationSeconds': durSec,
+        'candidateId': video['candidate_id'] ?? video['candidateId'] ?? '',
       });
 
       await prefs.setString('candidate_local_uploads', jsonEncode(list));
@@ -100,12 +111,18 @@ class CandidateVideoStore {
           final cId = vid['candidate_id']?.toString() ?? vid['candidateId']?.toString() ?? '';
           final cEmail = vid['email']?.toString() ?? '';
 
-          // Strict Candidate Scoping: match candidate ID or email
+          // Candidate Scoping: verify candidate ID match (handling string/int ID formats like '1' vs 'USR-1')
           if (cId.isNotEmpty && currentUserId.isNotEmpty) {
-            if (cId.toLowerCase() != currentUserId.toLowerCase()) {
-              final cEmailLower = cEmail.toLowerCase();
-              final curEmailLower = currentUserEmail.toLowerCase();
-              if (curEmailLower.isEmpty || cEmailLower != curEmailLower) {
+            final cIdLower = cId.toLowerCase();
+            final curIdLower = currentUserId.toLowerCase();
+            final cIdNum = cId.replaceAll(RegExp(r'[^0-9]'), '');
+            final curIdNum = currentUserId.replaceAll(RegExp(r'[^0-9]'), '');
+
+            final isDirectMatch = cIdLower == curIdLower ||
+                (cIdNum.isNotEmpty && curIdNum.isNotEmpty && cIdNum == curIdNum);
+
+            if (!isDirectMatch && cEmail.isNotEmpty && currentUserEmail.isNotEmpty) {
+              if (cEmail.toLowerCase() != currentUserEmail.toLowerCase()) {
                 continue;
               }
             }
@@ -120,15 +137,17 @@ class CandidateVideoStore {
           if (st == 'approved' || st == 'qc_approved') statusText = 'Approved';
           if (st.contains('reject')) statusText = 'Rejected';
 
+          final durSec = parseDurationSeconds(vid['duration']);
+
           allVideos.add({
             'id': id.isNotEmpty ? id : 'VID-${allVideos.length + 1}',
             'title': vid['title'] ?? 'Dataset Video Recording',
             'env': vid['environment_tag'] ?? 'Kitchen',
             'status': statusText,
             'date': vid['recording_date'] != null ? 'Uploaded' : 'Today, Just Now',
-            'size': '10.0 MB',
-            'duration': vid['duration'] != null ? '${vid['duration']}s' : '30:00 Mins',
-            'durationSeconds': parseDurationSeconds(vid['duration']),
+            'size': 'N/A',
+            'duration': formatDurationString(durSec),
+            'durationSeconds': durSec,
             'reason': vid['rejection_reason'] ?? '',
           });
         }
@@ -146,15 +165,17 @@ class CandidateVideoStore {
           if (id.isNotEmpty && processedVideoIds.contains(id)) continue;
           if (id.isNotEmpty) processedVideoIds.add(id);
 
+          final durSec = parseDurationSeconds(item['durationSeconds'] ?? item['duration']);
+
           allVideos.add({
             'id': id.isNotEmpty ? id : 'VID-${allVideos.length + 1}',
             'title': item['title'] ?? 'Uploaded Video Recording',
             'env': item['env'] ?? 'Kitchen',
             'status': item['status'] ?? 'Pending QC',
             'date': item['date'] ?? 'Today, Just Now',
-            'size': item['size'] ?? '10.0 MB',
-            'duration': item['duration'] ?? '30:00 Mins',
-            'durationSeconds': parseDurationSeconds(item['duration']),
+            'size': item['size'] ?? 'N/A',
+            'duration': formatDurationString(durSec),
+            'durationSeconds': durSec,
             'reason': item['reason'] ?? '',
           });
         }
@@ -172,15 +193,17 @@ class CandidateVideoStore {
             if (id.isNotEmpty && processedVideoIds.contains(id)) continue;
             if (id.isNotEmpty) processedVideoIds.add(id);
 
+            final durSec = parseDurationSeconds(item['durationSeconds'] ?? item['duration']);
+
             allVideos.add({
               'id': id.isNotEmpty ? id : 'VID-${allVideos.length + 1}',
               'title': item['title'] ?? 'Uploaded Video',
               'env': item['env'] ?? 'Kitchen',
               'status': item['status'] == 'Pending' ? 'Pending QC' : (item['status'] ?? 'Approved'),
               'date': item['time'] ?? 'Just Now',
-              'size': item['size'] ?? '10.0 MB',
-              'duration': item['duration'] ?? '30:00 Mins',
-              'durationSeconds': parseDurationSeconds(item['duration']),
+              'size': item['size'] ?? 'N/A',
+              'duration': formatDurationString(durSec),
+              'durationSeconds': durSec,
               'reason': item['rejectionReason'] ?? '',
             });
           }

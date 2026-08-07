@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 import 'dart:async';
+import 'vosk_voice_command_service.dart';
 import '../utils/html_helper.dart' as html;
-import '../utils/web_helper.dart' as web;
 
 enum VoiceCommand { start, stop }
 
@@ -10,8 +9,7 @@ class VoiceCommandService {
   VoiceCommandService._();
   static final VoiceCommandService instance = VoiceCommandService._();
 
-  final SpeechToText _speechToText = SpeechToText();
-  bool _isInitialized = false;
+  final VoskVoiceCommandService _voskService = VoskVoiceCommandService();
   bool _isListening = false;
   bool get isListening => _isListening;
 
@@ -21,9 +19,8 @@ class VoiceCommandService {
 
   void Function(VoiceCommand command)? _onCommandDetected;
   void Function(String statusMessage)? _onStatusChanged;
-  dynamic _webSpeechRecognition;
 
-  /// Initialize and start continuous speech recognition
+  /// Initialize and start continuous Vosk offline speech recognition
   Future<void> startListening({
     required void Function(VoiceCommand command) onCommand,
     void Function(String statusMessage)? onStatusChanged,
@@ -32,22 +29,18 @@ class VoiceCommandService {
     _onStatusChanged = onStatusChanged;
     _isListening = true;
 
-    if (kIsWeb) {
-      _initWebSpeechRecognition();
-      return;
-    }
+    _onStatusChanged?.call('🎤 Listening for "Start Recording" / "Stop Recording" via Vosk');
 
-    // Native Mobile Speech-to-Text Setup
-    try {
-      if (!_isInitialized) {
-        _isInitialized = await _speechToText.initialize(
-          onError: (errorNotification) {
-            debugPrint('Speech-to-text Error: ${errorNotification.errorMsg}');
-            _restartListeningIfNeeded();
-          },
-          onStatus: (status) {
-            debugPrint('Speech-to-text Status: $status');
-            if (status == 'done' || status == 'notListening') {
+    await _voskService.startListening(
+      onCommand: (command, rawPhrase) {
+        if (command == 'start_recording') {
+          _processTranscript('start');
+        } else if (command == 'stop_recording') {
+          _processTranscript('stop');
+        }
+      },
+    );
+  }
               _restartListeningIfNeeded();
             }
           },
@@ -177,19 +170,13 @@ class VoiceCommandService {
     }
   }
 
-  /// Ensure speech listening is active (re-triggers listener if stopped during video recording)
+  /// Ensure speech listening is active
   void ensureListening() {
     _isListening = true;
-    if (!kIsWeb) {
-      if (!_isInitialized) {
-        startListening(
-          onCommand: _onCommandDetected ?? (_) {},
-          onStatusChanged: _onStatusChanged,
-        );
-      } else if (!_speechToText.isListening) {
-        _startListeningLoop();
-      }
-    }
+    startListening(
+      onCommand: _onCommandDetected ?? (_) {},
+      onStatusChanged: _onStatusChanged,
+    );
   }
 
   /// Manually trigger voice command for testing / web simulation
@@ -201,15 +188,7 @@ class VoiceCommandService {
   /// Stop listening completely
   void stopListening() {
     _isListening = false;
-    if (kIsWeb && _webSpeechRecognition != null) {
-      try {
-        _webSpeechRecognition.stop();
-      } catch (_) {}
-    } else {
-      try {
-        _speechToText.stop().catchError((_) {});
-      } catch (_) {}
-    }
+    _voskService.stopListening();
     _onCommandDetected = null;
     _onStatusChanged = null;
   }

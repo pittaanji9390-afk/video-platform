@@ -68,30 +68,18 @@ class VideoService {
   async uploadVideo({ video_id, candidate_id, vendor_id, file, environment_tag, title }) {
     const relativePath = path.join('uploads', 'videos', file.filename || file.originalname).replace(/\\/g, '/');
     try {
+      if (!candidate_id) {
+        throw new Error('Candidate ID is required for video upload');
+      }
+
       let validCandidateId = candidate_id;
       let validVendorId = vendor_id;
 
-      // If candidate_id is missing or symbolic, resolve from candidates table
-      if (!validCandidateId || validCandidateId.startsWith('CAN-')) {
-        const candRes = await db.query('SELECT id, vendor_id FROM candidates WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
-        if (candRes.rowCount > 0) {
-          validCandidateId = candRes.rows[0].id;
-          if (!validVendorId) validVendorId = candRes.rows[0].vendor_id;
-        }
-      }
-
-      // If vendor_id is missing, look up from candidate record or active vendors table
+      // If vendor_id is missing, look up from candidate record
       if (!validVendorId && validCandidateId) {
         const candVendorRes = await db.query('SELECT vendor_id FROM candidates WHERE id = $1', [validCandidateId]);
         if (candVendorRes.rowCount > 0 && candVendorRes.rows[0].vendor_id) {
           validVendorId = candVendorRes.rows[0].vendor_id;
-        }
-      }
-
-      if (!validVendorId) {
-        const venRes = await db.query('SELECT id FROM vendors WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
-        if (venRes.rowCount > 0) {
-          validVendorId = venRes.rows[0].id;
         }
       }
 
@@ -191,8 +179,9 @@ class VideoService {
       const params = [];
       if (candidate_id) {
         params.push(candidate_id);
-        countQuery += ` AND v.candidate_id = $${params.length}`;
-        selectQuery += ` AND v.candidate_id = $${params.length}`;
+        const candCond = ` AND (v.candidate_id = $${params.length} OR v.candidate_id = NULLIF(regexp_replace($${params.length}, '\\D', '', 'g'), '') OR c.id = $${params.length} OR LOWER(c.email) = LOWER($${params.length}))`;
+        countQuery += candCond;
+        selectQuery += candCond;
       }
       if (vendor_id) {
         params.push(vendor_id);
@@ -266,12 +255,13 @@ class VideoService {
       let queryText = `
         SELECT 
           COUNT(*) AS total_uploaded,
-          COUNT(CASE WHEN LOWER(status) = 'pending_qc' THEN 1 END) AS pending_qc,
-          COUNT(CASE WHEN LOWER(status) = 'qc_approved' THEN 1 END) AS qc_approved,
-          COUNT(CASE WHEN LOWER(status) = 'qc_rejected' THEN 1 END) AS qc_rejected,
-          COUNT(CASE WHEN LOWER(status) = 'approved' THEN 1 END) AS approved,
-          COUNT(CASE WHEN LOWER(status) = 'rejected' THEN 1 END) AS rejected,
-          COALESCE(SUM(CASE WHEN LOWER(status) = 'approved' THEN duration * 1.5 ELSE 0 END), 0) AS total_earnings
+          COUNT(CASE WHEN LOWER(status) IN ('pending_qc', 'pending') THEN 1 END) AS pending_qc,
+          COUNT(CASE WHEN LOWER(status) IN ('qc_approved', 'approved') THEN 1 END) AS qc_approved,
+          COUNT(CASE WHEN LOWER(status) IN ('qc_rejected', 'rejected') THEN 1 END) AS qc_rejected,
+          COUNT(CASE WHEN LOWER(status) IN ('qc_approved', 'approved') THEN 1 END) AS approved,
+          COUNT(CASE WHEN LOWER(status) IN ('qc_rejected', 'rejected') THEN 1 END) AS rejected,
+          COALESCE(SUM(duration), 0) AS total_duration_seconds,
+          COALESCE(SUM(CASE WHEN LOWER(status) IN ('qc_approved', 'approved') THEN duration * 1.5 ELSE 0 END), 0) AS total_earnings
         FROM videos
         WHERE deleted_at IS NULL
       `;
@@ -290,6 +280,7 @@ class VideoService {
         qc_rejected: parseInt(r.qc_rejected || 0, 10),
         approved: parseInt(r.approved || 0, 10),
         rejected: parseInt(r.rejected || 0, 10),
+        total_duration_seconds: parseInt(r.total_duration_seconds || 0, 10),
         total_earnings: parseFloat(r.total_earnings || 0),
       };
     } catch (err) {

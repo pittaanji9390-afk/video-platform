@@ -272,7 +272,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             final List<Map<String, dynamic>> tempQC = [];
             for (var vid in items) {
               final id = vid['id']?.toString() ?? '';
-              final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-001');
+              final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-${tempQC.length + 1}');
               tempQC.add({
                 'id': shortId,
                 'raw_id': id,
@@ -332,7 +332,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
           for (var item in localList) {
             final id = (item['id'] ?? '').toString();
-            final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-001');
+            final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-${tempLocalQC.length + 1}');
             if (id.isNotEmpty && existingIds.contains(id)) continue;
             if (id.isNotEmpty) existingIds.add(id);
 
@@ -341,8 +341,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               'raw_id': id,
               'title': item['title'] ?? 'Dataset Video Recording',
               'candidateName': item['candidateName'] ?? item['candidate_name'] ?? 'Candidate',
-              'vendor': item['vendor'] ?? item['vendor_name'] ?? 'Acme Video Solutions',
-              'duration': item['duration'] ?? '30:00 Mins',
+              'vendor': item['vendor'] ?? item['vendor_name'] ?? 'N/A',
+              'duration': CandidateVideoStore.formatDurationString(item['durationSeconds'] ?? item['duration']),
               'status': item['status'] ?? 'Pending QC',
               'env': item['env'] ?? item['environment_tag'] ?? 'Kitchen',
             });

@@ -195,6 +195,10 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
       if (result.isSuccess) {
         final newVideoId = result.videoId ?? 'VID-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
+        final sizeStr = _fileSize > 0
+            ? '${(_fileSize / (1024 * 1024)).toStringAsFixed(1)} MB'
+            : 'N/A';
+
         // Add to history
         final newHistoryItem = {
           'id': newVideoId,
@@ -202,8 +206,8 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
           'env': _activeEnvTag ?? 'Kitchen',
           'status': 'Pending QC',
           'date': uploadTimestamp,
-          'size': '10.0 MB',
-          'duration': '30:00 Mins',
+          'size': sizeStr,
+          'duration': 'Just Now',
         };
 
         setState(() {
@@ -227,14 +231,13 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
               'candidateId': _candidateId ?? 'N/A',
               'candidateName': _candidateName ?? 'N/A',
               'candidatePhone': _candidatePhone ?? 'N/A',
-              'vendor': 'Acme Video Solutions',
-              'duration': '30:00 Mins',
-              'score': 94,
+              'vendor': 'N/A',
+              'duration': 'Just Now',
               'status': 'Pending',
               'env': _activeEnvTag ?? 'Kitchen',
               'time': uploadTimestamp,
-              'size': '10.0 MB',
-              'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+              'size': sizeStr,
+              'videoUrl': result.filePath ?? '',
               'rejectionReason': '',
             };
             list.insert(0, newSub);
@@ -381,7 +384,7 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                Text('Tag: ${_activeEnvTag ?? "Kitchen"} • 00:45 Mins', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                Text('Tag: ${_activeEnvTag ?? "General"}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                               ],
                             ),
                           ),

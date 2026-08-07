@@ -14,6 +14,7 @@ import '../../services/location_service.dart';
 import '../../services/voice_command_service.dart';
 import '../../services/compression_service.dart';
 import '../../services/upload_service.dart';
+import '../../services/candidate_video_store.dart';
 import '../../services/device_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/web_camera_view.dart';
@@ -450,19 +451,33 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
       environmentTag: _selectedEnvironmentTag,
       deviceId: deviceId,
       recordingDate: _recordingStartTime?.toIso8601String(),
+      durationSeconds: _elapsedSeconds,
     );
 
     final finalVideoId = uploadRes.videoId ?? 'VID-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
+    final session = await AuthService.restoreSession();
+    final currentEmail = session?['email'] ?? '';
+    final currentUserId = session?['id'] ?? '';
+    final currentName = session?['name'] ?? 'Candidate';
+    final currentVendorName = session?['vendor_name'] ?? session?['vendor'] ?? 'N/A';
+    final currentVendorId = session?['vendor_id'] ?? session?['vendorId'] ?? '';
+
+    // Save to CandidateVideoStore local store for immediate UI update
+    await CandidateVideoStore.saveUploadedVideo({
+      'id': finalVideoId,
+      'title': '${_selectedEnvironmentTag ?? "Recorded"} Dataset Sample',
+      'env': _selectedEnvironmentTag ?? 'Kitchen',
+      'status': 'Pending QC',
+      'date': 'Today, Just Now',
+      'size': _formatFileSize(compResult.compressedSizeBytes),
+      'duration': _formatDuration(_elapsedSeconds),
+      'durationSeconds': _elapsedSeconds,
+      'candidate_id': currentUserId,
+    });
+
     if (kIsWeb) {
       try {
-        final session = await AuthService.restoreSession();
-        final currentEmail = session?['email'] ?? '';
-        final currentUserId = session?['id'] ?? '';
-        final currentName = session?['name'] ?? 'Candidate';
-        final currentVendorName = session?['vendor_name'] ?? session?['vendor'] ?? 'Acme Video Solutions';
-        final currentVendorId = session?['vendor_id'] ?? session?['vendorId'] ?? '';
-
         final raw = web.localStorageGet('platform_qc_submissions');
         List<dynamic> list = [];
         if (raw != null) {
@@ -478,12 +493,11 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen> {
           'vendorId': currentVendorId,
           'duration': _formatDuration(_elapsedSeconds),
           'durationSeconds': _elapsedSeconds,
-          'score': 95,
           'status': 'Pending',
           'env': _selectedEnvironmentTag ?? 'Kitchen',
           'time': 'Just Now',
           'size': _formatFileSize(compResult.compressedSizeBytes),
-          'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+          'videoUrl': uploadRes.filePath ?? '',
           'rejectionReason': '',
         };
         list.insert(0, newSub);

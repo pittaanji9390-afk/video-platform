@@ -54,9 +54,6 @@ router.get('/:id/stream', authenticateJWT, validateVideoIdParam, (req, res, next
 // Apply JWT authentication middleware to protect private video management endpoints
 router.use(authenticateJWT);
 
-// PUT /api/v1/videos/:id/metadata - Update Specific Technical Metadata
-router.put('/:id/metadata', validateVideoIdParam, validateUpdateVideoMetadata, (req, res, next) => videoController.updateVideoMetadata(req, res, next));
-
 // POST /api/v1/videos - Create Video Metadata
 router.post('/', validateCreateVideo, (req, res, next) => videoController.createVideo(req, res, next));
 

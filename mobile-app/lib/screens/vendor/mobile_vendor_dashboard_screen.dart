@@ -8,6 +8,7 @@ import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/candidate_video_store.dart';
 import '../../widgets/powered_by_footer.dart';
 
 import '../../utils/web_helper.dart' as web;
@@ -382,7 +383,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                 'candidatePhone': item['candidatePhone'] ?? 'N/A',
                 'env': item['env'] ?? 'Kitchen',
                 'status': displayStatus,
-                'duration': item['duration'] ?? '30:00 Mins',
+                'duration': CandidateVideoStore.formatDurationString(durSec),
                 'time': item['time'] ?? 'Just Now',
               });
             }

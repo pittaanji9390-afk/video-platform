@@ -85,14 +85,61 @@ const patches = [
     CONSTRAINT uq_refresh_tokens_token UNIQUE (token)
   )`,
 
-  // 10. Seed default QC configs
-  `INSERT INTO admin_qc_configs (key, value, description) VALUES
-    ('auto_assignment_enabled',   'true', 'Auto-assign tickets on upload'),
-    ('auto_reassignment_enabled', 'true', 'Auto-reassign on reviewer inactivity'),
-    ('inactivity_timeout_hours',  '24',   'Hours before reassignment'),
-    ('max_tickets_per_reviewer',  '50',   'Max concurrent tickets per reviewer'),
-    ('assignment_strategy',       'LEAST_WORKLOAD', 'Distribution algorithm')
-   ON CONFLICT (key) DO NOTHING`,
+  // 11. Drop NOT NULL on candidate_id and vendor_id in videos for fallback safety
+  `ALTER TABLE videos ALTER COLUMN candidate_id DROP NOT NULL`,
+  `ALTER TABLE videos ALTER COLUMN vendor_id DROP NOT NULL`,
+  `ALTER TABLE videos ADD COLUMN IF NOT EXISTS rejection_reason TEXT`,
+
+  // 12. Seed default system vendor
+  `INSERT INTO vendors (id, vendor_code, company_name, contact_person, email, is_active, created_at, updated_at)
+   VALUES (
+     '00000000-0000-0000-0000-000000000003',
+     'SYSTEM_VENDOR',
+     'Default System Vendor',
+     'System Admin',
+     'vendor@video-platform.local',
+     TRUE, NOW(), NOW()
+   ) ON CONFLICT (email) DO NOTHING`,
+
+  // 13. Seed default system candidate
+  `INSERT INTO candidates (id, vendor_id, full_name, email, phone, is_active, created_at, updated_at)
+   VALUES (
+     '00000000-0000-0000-0000-000000000002',
+     '00000000-0000-0000-0000-000000000003',
+     'Default System Candidate',
+     'candidate@video-platform.local',
+     '+10000000000',
+     TRUE, NOW(), NOW()
+   ) ON CONFLICT (id) DO NOTHING`,
+
+  // 14. Ensure unified users table exists for role-based authentication
+  `CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(200),
+    role VARCHAR(50) NOT NULL DEFAULT 'candidate',
+    vendor_id UUID,
+    created_by UUID,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+
+  // 15. Upsert unified admin user into users table
+  `INSERT INTO users (id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+   VALUES (
+     '00000000-0000-0000-0000-000000000001',
+     'admin@gmail.com',
+     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+     'System Administrator',
+     'admin',
+     TRUE, NOW(), NOW()
+   ) ON CONFLICT (email) DO UPDATE
+       SET password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+           role = 'admin',
+           is_active = TRUE,
+           updated_at = NOW()`,
 ];
 
 async function runPatches() {

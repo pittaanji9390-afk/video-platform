@@ -162,15 +162,16 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
 
               if (isAssigned) {
                 if (id.isNotEmpty) processedIds.add(id);
+                final fallbackCode = 'TKT-${processedIds.length + 1}';
                 final formattedTicket = {
-                  'id': id.isNotEmpty ? id : 'TKT-001',
-                  'ticket_code': id.isNotEmpty ? id : 'TKT-001',
+                  'id': id.isNotEmpty ? id : fallbackCode,
+                  'ticket_code': id.isNotEmpty ? id : fallbackCode,
                   'title': item['title'] ?? 'Candidate Video Recording',
                   'candidate_name': item['candidateName'] ?? item['candidate_name'] ?? 'Candidate',
-                  'vendor_name': item['vendor'] ?? item['vendor_name'] ?? 'Acme Video Solutions',
-                  'duration': item['duration'] ?? '15 Mins',
+                  'vendor_name': item['vendor'] ?? item['vendor_name'] ?? 'N/A',
+                  'duration': CandidateVideoStore.formatDurationString(item['durationSeconds'] ?? item['duration']),
                   'environment_tag': item['env'] ?? 'Indoor',
-                  'audio_score': item['score'] ?? 95,
+                  'audio_score': item['score'] ?? 0,
                   'status': st.contains('approved') ? 'qc_approved' : (st.contains('reject') ? 'qc_rejected' : (st.contains('review') ? 'in_review' : 'pending_qc')),
                   'assigned_to': assignedTo,
                 };
@@ -198,23 +199,34 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
             if (id.isNotEmpty && processedIds.contains(id)) continue;
             if (id.isNotEmpty) processedIds.add(id);
 
-            final st = (item['status'] ?? 'Pending QC').toString().toLowerCase();
+            final statusStr = (item['status'] ?? 'Pending QC').toString();
+            final st = statusStr.toLowerCase();
+            final assignedTo = item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc'] ?? 'QC Specialist';
+
+            final fallbackCode = 'TKT-${processedIds.length + 1}';
             final formattedTicket = {
-              'id': id.isNotEmpty ? id : 'TKT-001',
-              'ticket_code': id.isNotEmpty ? id : 'TKT-001',
+              'id': id.isNotEmpty ? id : fallbackCode,
+              'ticket_code': id.isNotEmpty ? id : fallbackCode,
               'title': item['title'] ?? 'Candidate Video Recording',
               'candidate_name': item['candidateName'] ?? item['candidate_name'] ?? 'Candidate',
-              'vendor_name': item['vendor'] ?? item['vendor_name'] ?? 'Acme Video Solutions',
-              'duration': item['duration'] ?? '30:00 Mins',
+              'vendor_name': item['vendor'] ?? item['vendor_name'] ?? 'N/A',
+              'duration': CandidateVideoStore.formatDurationString(item['durationSeconds'] ?? item['duration']),
               'environment_tag': item['env'] ?? item['environment_tag'] ?? 'Kitchen',
-              'status': st.contains('approve') ? 'qc_approved' : (st.contains('reject') ? 'qc_rejected' : 'pending_qc'),
-              'assigned_to': 'QC Specialist',
+              'status': st.contains('approve')
+                  ? 'qc_approved'
+                  : (st.contains('reject')
+                      ? 'qc_rejected'
+                      : (st.contains('review') ? 'in_review' : 'pending_qc')),
+              'assigned_to': assignedTo,
             };
 
             if (st.contains('approve')) {
               fetchedApproved.add(formattedTicket);
             } else if (st.contains('reject')) {
               fetchedRejected.add(formattedTicket);
+            } else if (st.contains('review')) {
+              fetchedInReview.add(formattedTicket);
+              fetchedPending.add(formattedTicket);
             } else {
               fetchedPending.add(formattedTicket);
             }
@@ -320,29 +332,35 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
               list[i]['title'] == item['video_title'] ||
               list[i]['title'] == item['title'];
           if (idMatch) {
-            list[i]['status'] = newStatus;
+            list[i]['status'] = isApproved ? 'QC Approved' : 'Rejected';
             if (!isApproved) list[i]['reason'] = reason;
             found = true;
-            break;
           }
         }
-
-        if (!found) {
-          list.insert(0, {
-            'id': ticketId ?? 'VID-${DateTime.now().millisecondsSinceEpoch}',
-            'raw_id': ticketId,
-            'title': item['video_title'] ?? item['title'] ?? 'Candidate Dataset Recording',
-            'candidateName': item['candidate_name'] ?? item['candidateName'] ?? 'Rahul Sharma (CAN-001)',
-            'vendor': item['vendor_name'] ?? item['vendor'] ?? 'Acme Video Solutions',
-            'duration': '${item['duration'] ?? 15} Mins',
-            'score': 98,
-            'status': newStatus,
-            'reason': !isApproved ? reason : null,
-            'assignedTo': 'QC Team Reviewer',
-          });
+        if (found) {
+          web.localStorageSet('platform_qc_submissions', jsonEncode(list));
         }
+      } catch (err) {
+        debugPrint('LocalStorage sync exception: $err');
+      }
+    }
 
-        web.localStorageSet('platform_qc_submissions', jsonEncode(list));
+    // Persist to SharedPreferences candidate_local_uploads for mobile & native sync
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('candidate_local_uploads');
+      if (raw != null) {
+        final List<dynamic> localList = jsonDecode(raw);
+        for (var loc in localList) {
+          final locId = (loc['id'] ?? loc['raw_id'] ?? '').toString();
+          if (locId == ticketId.toString() || locId == (item['video_id'] ?? item['id']).toString()) {
+            loc['status'] = isApproved ? 'QC Approved' : 'Rejected';
+            if (!isApproved) loc['reason'] = reason;
+          }
+        }
+        await prefs.setString('candidate_local_uploads', jsonEncode(localList));
+      }
+    } catch (_) {}
 
         // Save Candidate Notification
         final rawNotifs = web.localStorageGet('platform_candidate_notifications');

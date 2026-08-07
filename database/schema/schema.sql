@@ -102,8 +102,8 @@ CREATE TABLE user_sessions (
 -- ============================================================================
 CREATE TABLE videos (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    candidate_id    UUID          NOT NULL,
-    vendor_id       UUID          NOT NULL,
+    candidate_id    UUID,
+    vendor_id       UUID,
     title           VARCHAR(255),
     description     TEXT,
     s3_url          VARCHAR(1000),
@@ -113,8 +113,9 @@ CREATE TABLE videos (
     duration        INTEGER,
     recording_date  TIMESTAMPTZ,
     upload_date     TIMESTAMPTZ,
-    status          VARCHAR(50)   NOT NULL DEFAULT 'pending',
+    status          VARCHAR(50)   NOT NULL DEFAULT 'PENDING_QC',
     environment_tag VARCHAR(100),
+    rejection_reason TEXT,
     latitude        DECIMAL(10, 8),
     longitude       DECIMAL(11, 8),
     device_id       VARCHAR(255),
@@ -124,7 +125,15 @@ CREATE TABLE videos (
 
     CONSTRAINT chk_videos_file_size CHECK (file_size IS NULL OR file_size >= 0),
     CONSTRAINT chk_videos_duration  CHECK (duration IS NULL OR duration >= 0),
-    CONSTRAINT chk_videos_status    CHECK (status IN ('pending', 'uploaded', 'under_review', 'approved', 'rejected')),
+    CONSTRAINT chk_videos_status    CHECK (status IN (
+      'pending','uploaded','under_review',
+      'pending_qc','assigned_qc','in_review',
+      'qc_approved','qc_rejected',
+      'approved','rejected',
+      'PENDING_QC','ASSIGNED_QC','IN_REVIEW',
+      'QC_APPROVED','QC_REJECTED',
+      'APPROVED','REJECTED'
+    )),
     CONSTRAINT fk_videos_candidate  FOREIGN KEY (candidate_id)
         REFERENCES candidates (id) ON DELETE CASCADE,
     CONSTRAINT fk_videos_vendor     FOREIGN KEY (vendor_id)
@@ -167,13 +176,19 @@ CREATE TABLE qc_reviews (
     reviewer_name   VARCHAR(200),
     status          VARCHAR(50)   NOT NULL,
     reject_reason   TEXT,
+    audio_score     DECIMAL(4,2)  DEFAULT 0,
+    lighting_score  DECIMAL(4,2)  DEFAULT 0,
+    framing_score   DECIMAL(4,2)  DEFAULT 0,
+    env_match_score DECIMAL(4,2)  DEFAULT 0,
+    qc_comments     TEXT,
+    admin_comments  TEXT,
     reviewed_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     deleted_at      TIMESTAMPTZ,
 
     CONSTRAINT uq_qc_reviews_video  UNIQUE (video_id),
-    CONSTRAINT chk_qc_reviews_status CHECK (status IN ('approved', 'rejected')),
+    CONSTRAINT chk_qc_reviews_status CHECK (status IN ('approved','rejected','qc_approved','qc_rejected','QC_APPROVED','QC_REJECTED')),
     CONSTRAINT fk_qc_reviews_video   FOREIGN KEY (video_id)
         REFERENCES videos (id) ON DELETE CASCADE,
     CONSTRAINT fk_qc_reviews_reviewer FOREIGN KEY (reviewer_id)

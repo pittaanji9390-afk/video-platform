@@ -158,9 +158,11 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
           _approvedCount = (data['qc_approved'] ?? 0) + (data['approved'] ?? 0);
           _rejectedCount = (data['qc_rejected'] ?? 0) + (data['rejected'] ?? 0);
 
-          final totalMinutes = _totalUploaded * 30; // 30 mins per recording
-          final hrs = (totalMinutes ~/ 60).toString().padLeft(2, '0');
-          final mins = (totalMinutes % 60).toString().padLeft(2, '0');
+          final totalSec = (data['total_duration_seconds'] is int)
+              ? data['total_duration_seconds'] as int
+              : _myUploads.fold<int>(0, (sum, item) => sum + CandidateVideoStore.parseDurationSeconds(item['durationSeconds'] ?? item['duration']));
+          final hrs = (totalSec ~/ 3600).toString().padLeft(2, '0');
+          final mins = ((totalSec % 3600) ~/ 60).toString().padLeft(2, '0');
           _hoursCollectedStr = '$hrs:$mins';
         } else {
           _computeFallbackStats();
@@ -182,6 +184,7 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
     int pending = 0;
     int approved = 0;
     int rejected = 0;
+    int totalSec = 0;
     for (var u in _myUploads) {
       final st = (u['status'] ?? '').toString().toLowerCase();
       if (st.contains('reject')) {
@@ -191,14 +194,14 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
       } else {
         pending++;
       }
+      totalSec += CandidateVideoStore.parseDurationSeconds(u['durationSeconds'] ?? u['duration']);
     }
     _pendingQcCount = pending;
     _approvedCount = approved;
     _rejectedCount = rejected;
 
-    final totalMinutes = _totalUploaded * 30;
-    final hrs = (totalMinutes ~/ 60).toString().padLeft(2, '0');
-    final mins = (totalMinutes % 60).toString().padLeft(2, '0');
+    final hrs = (totalSec ~/ 3600).toString().padLeft(2, '0');
+    final mins = ((totalSec % 3600) ~/ 60).toString().padLeft(2, '0');
     _hoursCollectedStr = '$hrs:$mins';
   }
 

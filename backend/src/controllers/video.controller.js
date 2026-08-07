@@ -66,6 +66,16 @@ class VideoController {
    */
   async uploadVideo(req, res, next) {
     try {
+      // Reject unauthenticated requests — require valid candidate JWT token
+      const candidate_id = req.user?.id || req.body?.candidate_id;
+      if (!candidate_id) {
+        return res.status(401).json({
+          status: 'error',
+          statusCode: 401,
+          message: 'Authentication required. Missing candidate authentication token.',
+        });
+      }
+
       // Reject phantom records — require actual file attachment
       if (!req.file) {
         return res.status(400).json({
@@ -75,8 +85,7 @@ class VideoController {
         });
       }
 
-      const candidate_id = req.user?.id || req.body?.candidate_id;
-      const vendor_id = req.user?.vendor_id || req.body?.vendor_id;
+      const vendor_id = req.user?.vendor_id || req.body?.vendor_id || null;
       const environment_tag = req.body?.environment_tag;
       const title = req.body?.title;
       const file = req.file;

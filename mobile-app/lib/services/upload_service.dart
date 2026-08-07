@@ -38,6 +38,7 @@ class UploadService {
     String? environmentTag,
     String? deviceId,
     String? recordingDate,
+    int? durationSeconds,
     void Function(double progress)? onProgress,
   }) async {
     // Get real candidate_id and vendor_id from session
@@ -60,7 +61,7 @@ class UploadService {
             'vendor_id':    realVendorId.isNotEmpty ? realVendorId : null,
             'title':         videoTitle,
             'environment_tag': environmentTag ?? 'Kitchen',
-            'duration':      1800, // 30 min default
+            if (durationSeconds != null) 'duration': durationSeconds,
             'status':        'PENDING_QC',
             'device_id':     deviceId,
             if (recordingDate != null) 'recording_date': recordingDate,
@@ -83,6 +84,14 @@ class UploadService {
           history.add(videoId);
           await prefs.setStringList('uploaded_video_ids', history);
         }
+
+        CandidateVideoStore.saveUploadedVideo({
+          'id': videoId,
+          'title': videoTitle,
+          'env': environmentTag ?? 'Kitchen',
+          'status': 'Pending QC',
+          'candidate_id': realUserId,
+        });
 
         onProgress?.call(1.0);
 
