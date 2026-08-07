@@ -28,15 +28,26 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter - enforce MP4 format only
+// File filter - enforce valid video formats (MP4, MOV, AVI, M4V, WEBM, 3GP, Octet-Stream)
 const fileFilter = (req, file, cb) => {
-  const isMp4Mime = file.mimetype === 'video/mp4';
-  const isMp4Ext = path.extname(file.originalname).toLowerCase() === '.mp4';
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExts = ['.mp4', '.mov', '.avi', '.m4v', '.3gp', '.webm', ''];
+  const allowedMimes = [
+    'video/mp4',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/3gpp',
+    'video/x-m4v',
+    'video/m4v',
+    'video/webm',
+    'application/octet-stream',
+    'binary/octet-stream',
+  ];
 
-  if (isMp4Mime && isMp4Ext) {
+  if (allowedMimes.includes(file.mimetype.toLowerCase()) || allowedExts.includes(ext)) {
     return cb(null, true);
   }
-  const error = new Error('Invalid file format. Only MP4 video files are allowed');
+  const error = new Error('Invalid file format. Only video files (MP4, MOV, AVI, M4V, WEBM) are allowed');
   error.statusCode = 400;
   return cb(error, false);
 };

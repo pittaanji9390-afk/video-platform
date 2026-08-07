@@ -38,9 +38,15 @@ const ALLOWED_MIME_TYPES = [
   'video/mp4',
   'video/quicktime',
   'video/x-msvideo',
+  'video/3gpp',
+  'video/x-m4v',
+  'video/m4v',
+  'video/webm',
+  'application/octet-stream',
+  'binary/octet-stream',
 ];
 
-const ALLOWED_EXTENSIONS = ['.mp4', '.mov', '.avi'];
+const ALLOWED_EXTENSIONS = ['.mp4', '.mov', '.avi', '.m4v', '.3gp', '.webm', ''];
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 

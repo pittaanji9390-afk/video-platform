@@ -201,7 +201,7 @@ class VideoService {
       const params = [];
       if (candidate_id) {
         params.push(candidate_id);
-        const candCond = ` AND (v.candidate_id = $${params.length} OR v.candidate_id = NULLIF(regexp_replace($${params.length}, '\\D', '', 'g'), '') OR c.id = $${params.length} OR LOWER(c.email) = LOWER($${params.length}) OR v.candidate_id IN (SELECT id FROM candidates WHERE LOWER(email) = LOWER($${params.length}) UNION SELECT id FROM users WHERE LOWER(email) = LOWER($${params.length})))`;
+        const candCond = ` AND (v.candidate_id::text = $${params.length}::text OR v.candidate_id::text = NULLIF(regexp_replace($${params.length}::text, '\\D', '', 'g'), '') OR c.id::text = $${params.length}::text OR LOWER(c.email) = LOWER($${params.length}) OR v.candidate_id IN (SELECT id FROM candidates WHERE LOWER(email) = LOWER($${params.length}) UNION SELECT id FROM users WHERE LOWER(email) = LOWER($${params.length})))`;
         countQuery += candCond;
         selectQuery += candCond;
       }
