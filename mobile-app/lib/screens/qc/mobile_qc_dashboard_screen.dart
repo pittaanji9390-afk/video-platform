@@ -268,18 +268,21 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
     final newStatus = isApproved ? 'qc_approved' : 'qc_rejected';
 
     try {
+      final headers = await AuthService.getAuthHeaders();
       final url = Uri.parse('${ApiConstants.baseUrl}/api/v1/qc-tickets/tickets/$ticketId/status');
       await http.patch(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({
           'status': newStatus,
+          'rejection_reason': reason,
           'reason': reason,
         }),
-      ).timeout(const Duration(seconds: 2));
+      ).timeout(const Duration(seconds: 3));
     } catch (_) {}
 
     try {
+      final headers = await AuthService.getAuthHeaders();
       final session = await AuthService.restoreSession();
       final reviewerId = session?['id'] ?? 'a0000000-0000-0000-0000-000000000001';
       final reviewerName = session?['name'] ?? session?['username'] ?? 'QC Specialist';
@@ -288,11 +291,12 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
       final reviewUrl = Uri.parse('${ApiConstants.baseUrl}/api/v1/qc-reviews');
       await http.post(
         reviewUrl,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({
           'video_id': videoId,
           'status': isApproved ? 'approved' : 'rejected',
           'reject_reason': reason,
+          'rejection_reason': reason,
           'reviewer_id': reviewerId,
           'reviewer_name': reviewerName,
           'audio_score': _audioClarity,

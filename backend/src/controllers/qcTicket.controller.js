@@ -32,6 +32,23 @@ class QCTicketController {
     }
   }
 
+  async assignTicket(req, res, next) {
+    try {
+      const ticketId = req.params.id || req.body.ticket_id || req.body.video_id;
+      const reviewerId = req.body.reviewer_id || req.body.reviewerId;
+      const reviewerName = req.body.reviewer_name || req.body.reviewerName;
+
+      const result = await qcTicketService.assignTicketToReviewer(ticketId, reviewerId, reviewerName);
+      return res.status(200).json({
+        status: 'success',
+        message: 'QC Ticket assigned successfully',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getMyTickets(req, res, next) {
     try {
       const reviewerId = req.user?.id || req.query.reviewer_id || 'a0000000-0000-0000-0000-000000000001';
@@ -51,15 +68,17 @@ class QCTicketController {
   async updateTicketStatus(req, res, next) {
     try {
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, rejection_reason, reject_reason, reason } = req.body;
+      const rejReason = rejection_reason || reject_reason || reason || '';
 
       const reviewerId = req.user?.id;
-      await qcTicketService.updateTicketStatus(id, status, reviewerId);
+      const result = await qcTicketService.updateTicketStatus(id, status, reviewerId, rejReason);
       await qcTicketService.updateReviewerActivity(reviewerId, 'review_submission');
 
       return res.status(200).json({
         status: 'success',
         message: `Ticket ${id} status updated to ${status}`,
+        data: result,
       });
     } catch (err) {
       next(err);

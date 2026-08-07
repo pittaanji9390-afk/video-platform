@@ -52,12 +52,79 @@ class QCTicketService {
   }
 
   /**
+   * Admin Manual Assignment: Assigns a QC Ticket / Video to a specific QC Team Reviewer
+   */
+  async assignTicketToReviewer(ticketIdOrVideoId, reviewerId, reviewerName = 'QC Specialist') {
+    try {
+      let targetReviewerId = reviewerId || '00000000-0000-0000-0000-000000000004';
+
+      let ticketRes = await db.query(
+        'SELECT * FROM qc_tickets WHERE id = $1 OR video_id = $1 OR video_id::text = $1',
+        [ticketIdOrVideoId]
+      );
+      
+      let ticket = ticketRes.rows[0];
+
+      if (!ticket) {
+        const vidRes = await db.query('SELECT * FROM videos WHERE id = $1 OR id::text = $1', [ticketIdOrVideoId]);
+        if (vidRes.rows.length > 0) {
+          const video = vidRes.rows[0];
+          const ticketCode = `TKT-${Math.floor(10000 + Math.random() * 90000)}`;
+          const insRes = await db.query(
+            `INSERT INTO qc_tickets (ticket_code, video_id, candidate_id, vendor_id, assigned_reviewer_id, status, assigned_at, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, 'ASSIGNED_QC', NOW(), NOW(), NOW()) RETURNING *`,
+            [ticketCode, video.id, video.candidate_id, video.vendor_id, targetReviewerId]
+          );
+          ticket = insRes.rows[0];
+        }
+      }
+
+      if (ticket) {
+        await db.query(
+          `UPDATE qc_tickets SET assigned_reviewer_id = $1, status = 'ASSIGNED_QC', assigned_at = NOW(), updated_at = NOW() WHERE id = $2`,
+          [targetReviewerId, ticket.id]
+        );
+        if (ticket.video_id) {
+          await db.query(
+            `UPDATE videos SET status = 'ASSIGNED_QC', updated_at = NOW() WHERE id = $1`,
+            [ticket.video_id]
+          );
+        }
+        await db.query(
+          `INSERT INTO ticket_assignments (ticket_id, reviewer_id, assignment_reason, assigned_at) VALUES ($1, $2, 'ADMIN_MANUAL_ASSIGNMENT', NOW())`,
+          [ticket.id, targetReviewerId]
+        );
+      }
+
+      return ticket;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  /**
    * Least Workload Algorithm: Distributes tickets equally among active QC team members
    */
   async distributeTicketsEqually(ticketIds = []) {
-    if (!ticketIds || ticketIds.length === 0) return [];
-
     try {
+      if (!ticketIds || ticketIds.length === 0) {
+        const unassignedRes = await db.query(
+          `SELECT id FROM qc_tickets WHERE assigned_reviewer_id IS NULL OR LOWER(status) IN ('unassigned', 'pending_qc', 'pending')`
+        );
+        ticketIds = unassignedRes.rows.map(r => r.id);
+
+        if (ticketIds.length === 0) {
+          const unassignedVids = await db.query(
+            `SELECT id FROM videos WHERE LOWER(status) IN ('pending_qc', 'pending')`
+          );
+          for (const v of unassignedVids.rows) {
+            const ticket = await this.assignTicketToReviewer(v.id, null);
+            if (ticket) ticketIds.push(ticket.id);
+          }
+        }
+      }
+
+      if (!ticketIds || ticketIds.length === 0) return [];
       // 1. Fetch all active & available QC reviewers
       const reviewersRes = await db.query(`
         SELECT reviewer_id, reviewer_name, reviewer_email
@@ -461,6 +528,88 @@ class QCTicketService {
         completed_today: 0,
         avg_review_time: '0 min',
       };
+    }
+  }
+
+  /**
+   * Update QC Ticket & Video Status (Approved / Rejected) + Notification & Audit Logging
+   */
+  async updateTicketStatus(ticketIdOrVideoId, status, reviewerId, rejectionReason = '') {
+    try {
+      const normalizedStatus = status ? status.toString().toUpperCase() : 'QC_APPROVED';
+      const isApproved = normalizedStatus.includes('APPROV');
+      const finalVideoStatus = isApproved ? 'QC_APPROVED' : 'REJECTED';
+      const finalTicketStatus = isApproved ? 'QC_APPROVED' : 'QC_REJECTED';
+
+      // Find ticket and video records
+      let ticketRes = await db.query(
+        'SELECT * FROM qc_tickets WHERE id = $1 OR video_id = $1 OR video_id::text = $1',
+        [ticketIdOrVideoId]
+      );
+      let ticket = ticketRes.rows[0];
+
+      let videoId = ticket ? ticket.video_id : ticketIdOrVideoId;
+      let candidateId = ticket ? ticket.candidate_id : null;
+
+      if (!candidateId && videoId) {
+        const vidRes = await db.query('SELECT candidate_id FROM videos WHERE id = $1 OR id::text = $1', [videoId]);
+        if (vidRes.rows.length > 0) candidateId = vidRes.rows[0].candidate_id;
+      }
+
+      // 1. Update qc_tickets status
+      if (ticket) {
+        await db.query(
+          `UPDATE qc_tickets SET status = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`,
+          [finalTicketStatus, ticket.id]
+        );
+      }
+
+      // 2. Update videos status and rejection reason
+      if (videoId) {
+        await db.query(
+          `UPDATE videos SET status = $1, rejection_reason = $2, updated_at = NOW() WHERE id = $3 OR id::text = $3`,
+          [finalVideoStatus, isApproved ? null : rejectionReason, videoId]
+        );
+      }
+
+      // 3. Send Notification to Candidate
+      if (candidateId) {
+        const notificationService = require('./notification.service');
+        const notifTitle = isApproved ? 'Video QC Approved 🎉' : 'Video QC Review Update ⚠️';
+        const notifMsg = isApproved
+          ? 'Your uploaded video passed Quality Check and is sent for final approval!'
+          : `Your uploaded video requires revision: ${rejectionReason || 'Quality criteria not met'}.`;
+
+        await notificationService.createNotification({
+          user_id: candidateId,
+          role: 'candidate',
+          title: notifTitle,
+          message: notifMsg,
+          video_id: videoId,
+          type: isApproved ? 'video_approved' : 'video_rejected',
+          color: isApproved ? '#059669' : '#DC2626',
+        }).catch(() => {});
+      }
+
+      // 4. Record Audit Log Entry
+      try {
+        await db.query(
+          `INSERT INTO audit_logs (actor_id, actor_role, action, resource_type, resource_id, details, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [
+            reviewerId || '00000000-0000-0000-0000-000000000004',
+            'qc_team',
+            isApproved ? 'QC_TICKET_APPROVED' : 'QC_TICKET_REJECTED',
+            'video',
+            videoId,
+            JSON.stringify({ status: finalVideoStatus, rejectionReason, ticketId: ticket?.id }),
+          ]
+        );
+      } catch (_) {}
+
+      return { status: finalVideoStatus, video_id: videoId };
+    } catch (e) {
+      throw e;
     }
   }
 

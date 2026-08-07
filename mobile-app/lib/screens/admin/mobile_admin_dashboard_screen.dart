@@ -1710,8 +1710,8 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   // TAB 4: QC APPROVED TAB (Verified & Approved Datasets)
   Widget _buildQCApprovedTab() {
     final approvedItems = _qcSubmissions.where((item) {
-      final s = item['status'] ?? '';
-      return s == 'Approved' || s == 'QC Approved' || s == 'Final Approved';
+      final s = (item['status'] ?? '').toString().toLowerCase().replaceAll('_', ' ').trim();
+      return s == 'approved' || s == 'qc approved' || s == 'final approved';
     }).toList();
 
     return Container(
@@ -2385,18 +2385,40 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(dialogCtx);
                 final item = _qcSubmissions.firstWhere(
                   (element) => element['id'] == videoId || element['raw_id'] == videoId,
                   orElse: () => <String, dynamic>{},
                 );
                 if (item.isNotEmpty) {
+                  final targetMember = _qcMembers.firstWhere(
+                    (m) => m['name']?.toString() == selectedReviewer,
+                    orElse: () => <String, dynamic>{},
+                  );
+                  final revId = targetMember['id']?.toString() ?? '00000000-0000-0000-0000-000000000004';
+
                   setState(() {
                     item['status'] = 'In Review';
                     item['assignedTo'] = selectedReviewer;
                     item['assigned_to'] = selectedReviewer;
                   });
+
+                  try {
+                    final headers = await AuthService.getAuthHeaders();
+                    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.apiVersion}/qc-tickets/tickets/assign');
+                    await http.post(
+                      url,
+                      headers: headers,
+                      body: jsonEncode({
+                        'video_id': videoId,
+                        'ticket_id': item['ticket_id'] ?? videoId,
+                        'reviewer_id': revId,
+                        'reviewer_name': selectedReviewer,
+                      }),
+                    ).timeout(const Duration(seconds: 4));
+                  } catch (_) {}
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Assigned video to "$selectedReviewer" ✓'),
