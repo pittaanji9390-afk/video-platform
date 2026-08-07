@@ -168,7 +168,7 @@ class QCTicketService {
 
         const updateTicketQuery = `
           UPDATE qc_tickets
-          SET assigned_reviewer_id = $1, assigned_reviewer_name = $2, assignment_time = NOW(), updated_at = NOW()
+          SET assigned_reviewer_id = $1, assigned_reviewer_name = $2, status = 'ASSIGNED_QC', assignment_time = NOW(), updated_at = NOW()
           WHERE id = $3 AND deleted_at IS NULL
           RETURNING *
         `;
@@ -179,6 +179,10 @@ class QCTicketService {
         ]);
 
         const ticket = updatedTicketRes.rows[0] || { id: ticketId, assigned_reviewer_id: selectedReviewer.reviewer_id, assigned_reviewer_name: selectedReviewer.reviewer_name };
+
+        if (ticket.video_id) {
+          await db.query(`UPDATE videos SET status = 'ASSIGNED_QC', updated_at = NOW() WHERE id = $1`, [ticket.video_id]).catch(() => {});
+        }
 
         // 4. Log Audit Entry in ticket_assignments table
         await db.query(`

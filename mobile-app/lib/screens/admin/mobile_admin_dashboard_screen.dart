@@ -148,7 +148,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
   Future<http.Response> _safeGet(String url, Map<String, String> headers) async {
     try {
-      return await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 3));
+      return await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 8));
     } catch (e) {
       debugPrint('GET failed for $url: $e');
       return http.Response('{}', 500);
@@ -2226,7 +2226,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           'strategy': 'EQUAL_DISTRIBUTION',
           'unassigned_count': pendingList.length,
         }),
-      ).timeout(const Duration(seconds: 2));
+      ).timeout(const Duration(seconds: 8));
     } catch (_) {}
 
     // Persist to SharedPreferences and Web LocalStorage
@@ -2243,7 +2243,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       } catch (_) {}
     }
 
-    setState(() {});
+    _loadDashboardData();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

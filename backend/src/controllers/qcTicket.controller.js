@@ -104,11 +104,12 @@ class QCTicketController {
 
   async triggerAutoReassignment(req, res, next) {
     try {
-      const result = await qcTicketService.triggerAutoReassignmentForInactiveReviewers();
+      const ticketIds = req.body.ticket_ids || req.body.ticketIds || [];
+      const assigned = await qcTicketService.distributeTicketsEqually(ticketIds);
       return res.status(200).json({
         status: 'success',
-        message: 'Auto-reassignment executed successfully',
-        data: result,
+        message: `Distributed ${assigned.length} tickets equally across active reviewers`,
+        data: assigned,
       });
     } catch (err) {
       next(err);

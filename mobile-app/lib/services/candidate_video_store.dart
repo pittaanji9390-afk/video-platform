@@ -101,7 +101,7 @@ class CandidateVideoStore {
       // 1. Fetch from PostgreSQL REST API strictly scoped to authenticated candidate
       final queryParam = currentUserId.isNotEmpty ? '?candidate_id=$currentUserId' : '';
       final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.apiVersion}/videos$queryParam');
-      final res = await http.get(url, headers: headers).timeout(const Duration(seconds: 3));
+      final res = await http.get(url, headers: headers).timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
