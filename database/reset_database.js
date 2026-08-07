@@ -314,12 +314,12 @@ VALUES (
 );
 
 -- Seed Unified Users for Auth
-INSERT INTO users (id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+INSERT INTO users (id, email, password_hash, full_name, role, vendor_id, is_active, created_at, updated_at)
 VALUES 
-  ('00000000-0000-0000-0000-000000000001', 'admin@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System Administrator', 'admin', TRUE, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000000004', 'qc@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'QC Team Lead', 'qc_team', TRUE, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000000003', 'vendor@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vendor Manager', 'vendor', TRUE, NOW(), NOW()),
-  ('00000000-0000-0000-0000-000000000002', 'candidate@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John Candidate', 'candidate', TRUE, NOW(), NOW());
+  ('00000000-0000-0000-0000-000000000001', 'admin@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System Administrator', 'admin', NULL, TRUE, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000004', 'qc@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'QC Team Lead', 'qc_team', NULL, TRUE, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000003', 'vendor@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Vendor Manager', 'vendor', '00000000-0000-0000-0000-000000000003', TRUE, NOW(), NOW()),
+  ('00000000-0000-0000-0000-000000000002', 'candidate@videoplatform.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John Candidate', 'candidate', '00000000-0000-0000-0000-000000000003', TRUE, NOW(), NOW());
 
 -- Seed Default QC Configs
 INSERT INTO admin_qc_configs (key, value, description) VALUES
