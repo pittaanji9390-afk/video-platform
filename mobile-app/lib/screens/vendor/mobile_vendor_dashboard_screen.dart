@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../services/candidate_video_store.dart';
+import '../../widgets/video_playback_dialog.dart';
 import '../../widgets/powered_by_footer.dart';
 
 import '../../utils/web_helper.dart' as web;
@@ -1623,10 +1624,12 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 54),
+              child: GestureDetector(
+                onTap: () => VideoPlaybackDialog.show(context, item),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 54),
                   Positioned(
                     bottom: 8,
                     right: 8,

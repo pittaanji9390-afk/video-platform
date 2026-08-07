@@ -8,6 +8,7 @@ import '../../core/constants/api_constants.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../services/candidate_video_store.dart';
+import '../../widgets/video_playback_dialog.dart';
 import '../../widgets/powered_by_footer.dart';
 
 class MobileQCDashboardScreen extends StatefulWidget {
@@ -551,38 +552,41 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Video Preview Placeholder Box
-                  Container(
-                    width: double.infinity,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.play_circle_fill_rounded, size: 54, color: Colors.white),
-                            SizedBox(height: 6),
-                            Text('Tap to Inspect High-Definition Video Clip', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                          ],
-                        ),
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-                            child: Text(
-                              '${item['duration'] ?? 30}s',
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  // Video Preview Container
+                  GestureDetector(
+                    onTap: () => VideoPlaybackDialog.show(context, item),
+                    child: Container(
+                      width: double.infinity,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.play_circle_fill_rounded, size: 54, color: Colors.white),
+                              SizedBox(height: 6),
+                              Text('Tap to Inspect High-Definition Video Clip', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            ],
+                          ),
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
+                              child: Text(
+                                '${item['duration'] ?? 30}s',
+                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
 

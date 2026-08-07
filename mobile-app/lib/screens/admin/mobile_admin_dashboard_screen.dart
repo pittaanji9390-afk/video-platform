@@ -7,6 +7,7 @@ import '../../core/constants/api_constants.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../services/candidate_video_store.dart';
+import '../../widgets/video_playback_dialog.dart';
 import '../../widgets/powered_by_footer.dart';
 import '../../utils/web_helper.dart' as web;
 
@@ -1838,6 +1839,19 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
           Row(
             children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => VideoPlaybackDialog.show(context, item),
+                  icon: const Icon(Icons.play_circle_fill_rounded, size: 14, color: Color(0xFF2563EB)),
+                  label: const Text('Watch Video', style: TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFBFDBFE)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _updateVideoStatus(item['id'], 'Rejected'),
