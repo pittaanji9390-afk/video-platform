@@ -11,7 +11,7 @@ if (!process.env.JWT_REFRESH_SECRET) {
 }
 
 module.exports = {
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 5002,
   nodeEnv: process.env.NODE_ENV || 'development',
   database: {
     url: process.env.DB_SSL === 'true' ? process.env.DATABASE_URL : null,
