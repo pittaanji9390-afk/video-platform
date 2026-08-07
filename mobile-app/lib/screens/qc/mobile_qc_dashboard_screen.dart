@@ -7,6 +7,7 @@ import '../../utils/web_helper.dart' as web;
 import '../../core/constants/api_constants.dart';
 import '../../config/routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/candidate_video_store.dart';
 import '../../widgets/powered_by_footer.dart';
 
 class MobileQCDashboardScreen extends StatefulWidget {
