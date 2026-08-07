@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'vosk_voice_command_service.dart';
-import '../utils/html_helper.dart' as html;
 
 enum VoiceCommand { start, stop }
 
@@ -41,36 +40,6 @@ class VoiceCommandService {
       },
     );
   }
-              _restartListeningIfNeeded();
-            }
-          },
-        ).catchError((err) {
-          debugPrint('Speech initialize catchError: $err');
-          return false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Speech initialize exception: $e');
-      _isInitialized = false;
-    }
-
-    _startListeningLoop();
-  }
-
-  void _initWebSpeechRecognition() {
-    try {
-      if (kIsWeb && html.SpeechRecognition.supported) {
-        _webSpeechRecognition = html.SpeechRecognition();
-        _onStatusChanged?.call('🎤 Listening for "Start Recording" / "Stop Recording"');
-      } else {
-        _onStatusChanged?.call('🎤 Voice Recognition Active');
-      }
-    } catch (e) {
-      debugPrint('Web speech exception: $e');
-      _onStatusChanged?.call('🎤 Voice Recognition Active');
-    }
-  }
-
 
   /// Process recognized text with strict matching and debounce
   void _processTranscript(String text) {
@@ -101,7 +70,7 @@ class VoiceCommandService {
     final cleaned = text.trim().toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
     if (cleaned.isEmpty) return null;
 
-    // Check for Stop variations: "stop", "stop recording", "stop record", "stop video", "please stop", "end recording", "finish recording", "cut", "halt", "done", "pause"
+    // Check for Stop variations
     if (cleaned.contains('stop') || 
         cleaned.contains('stopp') || 
         cleaned.contains('top recording') || 
@@ -114,7 +83,7 @@ class VoiceCommandService {
       return VoiceCommand.stop;
     }
 
-    // Check for Start variations: "start", "start recording", "start record", "begin recording", "action"
+    // Check for Start variations
     if (cleaned.contains('start') || 
         cleaned.contains('begin') || 
         cleaned.contains('action')) {
@@ -125,49 +94,10 @@ class VoiceCommandService {
     return null;
   }
 
-  void _startListeningLoop() {
-    if (!_isInitialized || kIsWeb) return;
-    _isListening = true;
-
-    try {
-      if (_speechToText.isListening) return;
-
-      _speechToText.listen(
-        onResult: (result) {
-          final recognizedWords = result.recognizedWords;
-          if (recognizedWords.isNotEmpty) {
-            _processTranscript(recognizedWords);
-          }
-
-          // Check alternate hypotheses for instant command interception
-          for (var alt in result.alternates) {
-            if (alt.recognizedWords.isNotEmpty) {
-              _processTranscript(alt.recognizedWords);
-            }
-          }
-        },
-        listenFor: const Duration(hours: 1),
-        pauseFor: const Duration(seconds: 60),
-        partialResults: true,
-        cancelOnError: false,
-        listenMode: ListenMode.dictation,
-      ).catchError((err) {
-        debugPrint('Speech listen catchError: $err');
-      });
-      _onStatusChanged?.call('🎤 Listening for "Start Recording" / "Stop Recording"');
-    } catch (e) {
-      debugPrint('Error launching speech recognition: $e');
-    }
-  }
-
-  void _restartListeningIfNeeded() {
-    if (_isListening && !kIsWeb) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (_isListening && !_speechToText.isListening) {
-          _startListeningLoop();
-        }
-      });
-    }
+  /// Manually trigger voice command for testing / web simulation
+  void processSimulatedSpeech(String text) {
+    if (!_isListening) return;
+    _processTranscript(text.trim().toLowerCase());
   }
 
   /// Ensure speech listening is active
@@ -177,12 +107,6 @@ class VoiceCommandService {
       onCommand: _onCommandDetected ?? (_) {},
       onStatusChanged: _onStatusChanged,
     );
-  }
-
-  /// Manually trigger voice command for testing / web simulation
-  void processSimulatedSpeech(String text) {
-    if (!_isListening) return;
-    _processTranscript(text.trim().toLowerCase());
   }
 
   /// Stop listening completely

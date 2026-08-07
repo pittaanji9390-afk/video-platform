@@ -13,8 +13,14 @@ echo [2/3] Committing updates...
 git commit -m "release: automated build and APK release update"
 
 echo.
-echo [3/3] Pushing to GitHub main branch...
+echo [3/3] Syncing and Pushing to GitHub main branch...
+git pull origin main --rebase
 git push origin main
+
+if %errorlevel% neq 0 (
+    echo ⚠️ Standard push failed, pushing with force...
+    git push origin main --force
+)
 
 echo.
 echo ========================================================
