@@ -38,12 +38,8 @@ class QCTicketService {
 
       const ticket = res.rows[0];
 
-      // Auto-assign ticket if auto-assignment configuration is enabled
-      const autoAssignConfig = await this.getQCConfigValue('auto_assignment_enabled', 'true');
-      if (autoAssignConfig === 'true') {
-        await this.distributeTicketsEqually([ticket.id]);
-      }
-
+      // Newly uploaded candidate videos remain strictly unassigned in PENDING_QC status
+      // until the Admin explicitly clicks "Assign Tickets"
       return ticket;
     } catch (err) {
       logger.error(`Failed to create ticket for video ${videoId}`, { error: err.message });
@@ -196,11 +192,24 @@ class QCTicketService {
           selectedReviewer.reviewer_name,
         ]).catch(() => {});
 
+        // 5. Create real-time notification for candidate
+        if (ticket.candidate_id) {
+          await db.query(`
+            INSERT INTO notifications (user_id, user_role, title, message, event_type, related_video_id, created_at)
+            VALUES ($1, 'candidate', 'Video Assigned for QC 🔍', $2, 'qc_assigned', $3, NOW())
+          `, [
+            ticket.candidate_id,
+            `Your video dataset has been assigned to QC Specialist ${selectedReviewer.reviewer_name} for quality review.`,
+            ticket.video_id,
+          ]).catch(() => {});
+        }
+
         // Increment local workload counter for balanced batch distribution
         workloadMap[selectedReviewer.reviewer_id] = (workloadMap[selectedReviewer.reviewer_id] || 0) + 1;
         assignedResults.push(ticket);
       }
 
+      logger.info(`✓ Least Workload Algorithm Completed: Equally distributed ${assignedResults.length} tickets across active QC team.`);
       return assignedResults;
     } catch (err) {
       logger.error('Error in distributeTicketsEqually', { error: err.message });
@@ -577,8 +586,8 @@ class QCTicketService {
       }
 
       // 3. Send Notification to Candidate
+      const notificationService = require('./notification.service');
       if (candidateId) {
-        const notificationService = require('./notification.service');
         const notifTitle = isApproved ? 'Video QC Approved 🎉' : 'Video QC Review Update ⚠️';
         const notifMsg = isApproved
           ? 'Your uploaded video passed Quality Check and is sent for final approval!'
@@ -590,8 +599,32 @@ class QCTicketService {
           title: notifTitle,
           message: notifMsg,
           video_id: videoId,
-          type: isApproved ? 'video_approved' : 'video_rejected',
+          type: isApproved ? 'qc_approved' : 'qc_rejected',
           color: isApproved ? '#059669' : '#DC2626',
+        }).catch(() => {});
+      }
+
+      // Send Notification to Admin
+      await notificationService.createNotification({
+        user_id: null,
+        role: 'admin',
+        title: isApproved ? 'Video QC Approved (Pending Admin) 🟣' : 'Video QC Rejected by Inspector ⚠️',
+        message: isApproved ? `Video dataset "${ticket?.ticket_code || videoId}" passed QC check.` : `Video dataset "${ticket?.ticket_code || videoId}" was rejected by QC inspector.`,
+        video_id: videoId,
+        type: isApproved ? 'qc_approved' : 'qc_rejected',
+        color: isApproved ? '#7C3AED' : '#DC2626',
+      }).catch(() => {});
+
+      // Send Notification to Vendor
+      if (ticket?.vendor_id) {
+        await notificationService.createNotification({
+          user_id: ticket.vendor_id,
+          role: 'vendor',
+          title: isApproved ? 'Candidate Video QC Approved 🟣' : 'Candidate Video QC Rejected ⚠️',
+          message: isApproved ? `Candidate video passed QC evaluation.` : `Candidate video rejected during QC evaluation: ${rejectionReason || 'Quality standards not met'}.`,
+          video_id: videoId,
+          type: isApproved ? 'qc_approved' : 'qc_rejected',
+          color: isApproved ? '#7C3AED' : '#DC2626',
         }).catch(() => {});
       }
 

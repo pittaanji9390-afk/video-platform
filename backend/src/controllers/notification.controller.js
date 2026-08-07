@@ -17,8 +17,10 @@ class NotificationController {
     res.setHeader('Access-Control-Allow-Origin', sseOrigin);
     res.flushHeaders();
 
-    // Register client for real-time notification push
-    notificationService.registerSSEClient(res);
+    // Register client for targeted real-time notification push
+    const userId = req.user?.id || req.query?.user_id || req.query?.userId;
+    const role = req.user?.role || req.query?.role;
+    notificationService.registerSSEClient(res, userId, role);
 
     // Send initial ping
     res.write('data: {"type": "connected"}\n\n');

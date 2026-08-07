@@ -246,12 +246,12 @@ class AdminService {
         const video = videos[i];
         const assignedQC = qcMembers[i % qcMembers.length];
 
-        // Create or update QC ticket
+        // Create or update QC ticket using unified assigned_reviewer_id and ASSIGNED_QC status
         await db.query(`
-          INSERT INTO qc_tickets (video_id, assigned_to_user_id, status, priority, created_at, updated_at)
-          VALUES ($1, $2, 'assigned', 'medium', NOW(), NOW())
-          ON CONFLICT (video_id) DO UPDATE SET assigned_to_user_id = $2, status = 'assigned', updated_at = NOW()
-        `, [video.id, assignedQC.id]).catch(() => {});
+          INSERT INTO qc_tickets (video_id, candidate_id, vendor_id, assigned_reviewer_id, assigned_reviewer_name, status, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, 'ASSIGNED_QC', NOW(), NOW())
+          ON CONFLICT (video_id) DO UPDATE SET assigned_reviewer_id = $4, assigned_reviewer_name = $5, status = 'ASSIGNED_QC', updated_at = NOW()
+        `, [video.id, video.candidate_id || null, video.vendor_id || null, assignedQC.id, assignedQC.full_name || 'QC Specialist']).catch(() => {});
 
         // Update video status to assigned
         await db.query(`

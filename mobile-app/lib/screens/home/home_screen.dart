@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final headers = await AuthService.getAuthHeaders();
       final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.apiVersion}/notifications?role=candidate');
-      final res = await http.get(url, headers: headers).timeout(const Duration(seconds: 3));
+      final res = await http.get(url, headers: headers).timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);

@@ -141,9 +141,21 @@ class VideoService {
           title: 'New Video Uploaded for QC Review 📹',
           message: `New video "${videoRecord.title}" (${videoRecord.environment_tag}) submitted for QC review.`,
           video_id: videoRecord.id,
-          type: 'qc_assigned',
+          type: 'video_uploaded',
           color: '#2563EB',
         }).catch(() => {});
+
+        if (videoRecord.vendor_id) {
+          await notificationService.createNotification({
+            user_id: videoRecord.vendor_id,
+            role: 'vendor',
+            title: 'New Candidate Video Uploaded 📹',
+            message: `A candidate uploaded "${videoRecord.title}" in category ${videoRecord.environment_tag}.`,
+            video_id: videoRecord.id,
+            type: 'video_uploaded',
+            color: '#0EA5E9',
+          }).catch(() => {});
+        }
       }
 
       return videoRecord;
@@ -352,7 +364,7 @@ class VideoService {
       let queryText = `
         SELECT 
           COUNT(*) AS total_uploaded,
-          COUNT(CASE WHEN LOWER(status) IN ('pending_qc', 'pending') THEN 1 END) AS pending_qc,
+          COUNT(CASE WHEN LOWER(status) IN ('pending_qc', 'pending', 'assigned_qc', 'in_review', 'unassigned') THEN 1 END) AS pending_qc,
           COUNT(CASE WHEN LOWER(status) IN ('qc_approved', 'approved') THEN 1 END) AS qc_approved,
           COUNT(CASE WHEN LOWER(status) IN ('qc_rejected', 'rejected') THEN 1 END) AS qc_rejected,
           COUNT(CASE WHEN LOWER(status) IN ('qc_approved', 'approved') THEN 1 END) AS approved,
@@ -365,7 +377,7 @@ class VideoService {
       const params = [];
       if (candidateId) {
         params.push(candidateId);
-        queryText += ` AND candidate_id = $1`;
+        queryText += ` AND (candidate_id = $1 OR candidate_id::text = $1::text)`;
       }
 
       const res = await db.query(queryText, params);

@@ -126,10 +126,20 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
               final id = (t['id'] ?? t['ticket_code'] ?? '').toString();
               if (id.isNotEmpty) processedIds.add(id);
               final st = (t['status'] ?? 'pending_qc').toString().toLowerCase();
+              final assignedTo = (t['assigned_reviewer_name'] ?? t['assignedTo'] ?? t['assigned_to'] ?? '').toString();
+              final reviewerId = (t['assigned_reviewer_id'] ?? t['assigned_reviewer'] ?? '').toString();
+
+              if (reviewerId.isNotEmpty && reviewerId != myReviewerId && myReviewerId.isNotEmpty) {
+                continue; // Skip tickets assigned to another reviewer
+              }
+
               final map = Map<String, dynamic>.from(t);
+              map['assigned_reviewer_id'] = reviewerId;
+              map['assigned_reviewer_name'] = assignedTo;
+
               if (st == 'in_review') fetchedInReview.add(map);
-              else if (st == 'qc_approved') fetchedApproved.add(map);
-              else if (st == 'qc_rejected') fetchedRejected.add(map);
+              else if (st == 'qc_approved' || st == 'approved') fetchedApproved.add(map);
+              else if (st.contains('reject')) fetchedRejected.add(map);
               else fetchedPending.add(map);
             }
           }

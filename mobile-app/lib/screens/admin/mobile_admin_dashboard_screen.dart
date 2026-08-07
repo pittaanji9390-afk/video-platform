@@ -120,6 +120,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   @override
   void initState() {
     super.initState();
+    _subscribeRealtime();
     _initDashboard();
   }
 
@@ -1599,7 +1600,14 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   // TAB 3: QC QUEUE TAB (Pending & In-Review Queue)
   Widget _buildQCQueueTab() {
     _checkAndReclaimInactiveQCTickets();
-    final pendingItems = _qcSubmissions.where((item) => (item['status'] ?? '') != 'Approved' && (item['status'] ?? '') != 'Final Approved').toList();
+    final pendingItems = _qcSubmissions.where((item) {
+      final st = (item['status'] ?? 'PENDING_QC').toString().toUpperCase().replaceAll(' ', '_');
+      final assigned = item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc'] ?? item['assigned_reviewer_id'];
+      final isUnassigned = assigned == null || assigned.toString().isEmpty || assigned.toString().toLowerCase().contains('unassigned');
+
+      // Display ONLY unassigned videos with PENDING_QC status waiting for Admin ticket assignment
+      return (st == 'PENDING_QC' || st == 'PENDING' || st == 'UNASSIGNED') && isUnassigned;
+    }).toList();
 
     return Container(
       color: const Color(0xFFF8FAFC),
@@ -1704,6 +1712,17 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         ),
       ),
     );
+  }
+
+  void _subscribeRealtime() {
+    if (kIsWeb) {
+      try {
+        final bc = web.BroadcastChannelStub('platform_realtime_channel');
+        bc.onMessage.listen((event) {
+          if (mounted) _loadDashboardData();
+        });
+      } catch (_) {}
+    }
   }
 
   // TAB 4: QC APPROVED TAB (Verified & Approved Datasets)
@@ -1829,9 +1848,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           Text('Candidate: ${item['candidateName']} • Vendor: ${item['vendor']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
           const SizedBox(height: 4),
           Text('Duration: ${item['duration']} • ID: ${item['id']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-          if (item['assigned_qc'] != null && item['assigned_qc'].toString().isNotEmpty) ...[
+          if ((item['assigned_reviewer_name'] ?? item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc']) != null && (item['assigned_reviewer_name'] ?? item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc']).toString().isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text('Assigned to: ${item['assigned_qc']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+            Text('Assigned to: ${item['assigned_reviewer_name'] ?? item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
           ],
           const SizedBox(height: 12),
 

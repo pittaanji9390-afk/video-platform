@@ -97,13 +97,24 @@ class NotificationService {
       }
     }
 
-    // 2. SSE push broadcast
+    // 2. Targeted SSE push broadcast
     const dataStr = `data: ${JSON.stringify(payload)}\n\n`;
-    for (const clientRes of sseClients) {
+    for (const client of sseClients) {
       try {
-        clientRes.write(dataStr);
+        const clientRes = client.res || client;
+        const cUserId = client.userId || null;
+        const cRole = client.role || null;
+
+        // Match target user ID or target role
+        const matchesUser = payload.user_id && cUserId && String(cUserId) === String(payload.user_id);
+        const matchesRole = payload.role && cRole && String(cRole).toLowerCase() === String(payload.role).toLowerCase();
+        const isGlobalAdmin = cRole === 'admin';
+
+        if (matchesUser || matchesRole || isGlobalAdmin || !payload.user_id) {
+          clientRes.write(dataStr);
+        }
       } catch (e) {
-        sseClients.delete(clientRes);
+        sseClients.delete(client);
       }
     }
   }
@@ -111,10 +122,11 @@ class NotificationService {
   /**
    * Register SSE client for real-time notification push stream
    */
-  registerSSEClient(res) {
-    sseClients.add(res);
+  registerSSEClient(res, userId = null, role = null) {
+    const clientObj = { res, userId, role };
+    sseClients.add(clientObj);
     res.on('close', () => {
-      sseClients.delete(res);
+      sseClients.delete(clientObj);
     });
   }
 

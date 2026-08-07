@@ -13,7 +13,9 @@ const logger = require('../utils/logger');
 class VideoController {
   async getCandidateStats(req, res, next) {
     try {
-      const candidateId = req.user?.id || req.query.candidate_id || null;
+      // STRICT JWT CANDIDATE IDENTIFICATION:
+      // Always identify candidate from authenticated JWT token (req.user.id)
+      const candidateId = (req.user && req.user.role === 'candidate') ? req.user.id : (req.user?.id || req.query.candidate_id || null);
       const stats = await videoService.getCandidateDashboardStats(candidateId);
       return res.status(200).json({
         status: 'success',
@@ -39,7 +41,7 @@ class VideoController {
       } = req.body;
 
       const newVideo = await videoService.createVideo({
-        candidate_id,
+        candidate_id: (req.user && req.user.role === 'candidate') ? req.user.id : candidate_id,
         vendor_id,
         title,
         description,
@@ -66,8 +68,9 @@ class VideoController {
    */
   async uploadVideo(req, res, next) {
     try {
-      // Reject unauthenticated requests — require valid candidate JWT token
-      const candidate_id = req.user?.id || req.body?.candidate_id;
+      // STRICT JWT CANDIDATE IDENTIFICATION:
+      // Always identify candidate from authenticated JWT token (req.user.id)
+      const candidate_id = req.user?.id;
       if (!candidate_id) {
         return res.status(401).json({
           status: 'error',
@@ -151,8 +154,12 @@ class VideoController {
     try {
       let { candidate_id, vendor_id, vendor_code, status, page, limit } = req.query;
 
-      if (!candidate_id && req.user?.role === 'candidate') {
-        candidate_id = req.user.id || req.user.email;
+      // STRICT JWT CANDIDATE / VENDOR IDENTIFICATION:
+      if (req.user && req.user.role === 'candidate') {
+        candidate_id = req.user.id;
+      } else if (req.user && req.user.role === 'vendor') {
+        vendor_id = req.user.vendor_id || req.user.id;
+        vendor_code = req.user.vendor_code || vendor_code;
       }
 
       const result = await videoService.getAllVideos({ candidate_id, vendor_id, vendor_code, status, page, limit });

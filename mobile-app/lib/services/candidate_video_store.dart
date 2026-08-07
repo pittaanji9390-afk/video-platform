@@ -43,8 +43,12 @@ class CandidateVideoStore {
   /// Persist newly uploaded video locally to guarantee immediate UI display
   static Future<void> saveUploadedVideo(Map<String, dynamic> video) async {
     try {
+      final session = await AuthService.restoreSession();
+      final currentUserId = session?['id'] ?? '';
+      final cacheKey = currentUserId.isNotEmpty ? 'candidate_local_uploads_$currentUserId' : 'candidate_local_uploads';
+
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('candidate_local_uploads');
+      final raw = prefs.getString(cacheKey);
       List<dynamic> list = [];
       if (raw != null) {
         try {
@@ -70,10 +74,10 @@ class CandidateVideoStore {
         'size': video['size'] ?? 'N/A',
         'duration': formatDurationString(durSec),
         'durationSeconds': durSec,
-        'candidateId': video['candidate_id'] ?? video['candidateId'] ?? '',
+        'candidateId': currentUserId.isNotEmpty ? currentUserId : (video['candidate_id'] ?? video['candidateId'] ?? ''),
       });
 
-      await prefs.setString('candidate_local_uploads', jsonEncode(list));
+      await prefs.setString(cacheKey, jsonEncode(list));
 
       if (kIsWeb) {
         try {
@@ -96,7 +100,7 @@ class CandidateVideoStore {
       final headers = await AuthService.getAuthHeaders();
       final session = await AuthService.restoreSession();
       final currentUserId = session?['id'] ?? '';
-      final currentUserEmail = session?['email'] ?? '';
+      final cacheKey = currentUserId.isNotEmpty ? 'candidate_local_uploads_$currentUserId' : 'candidate_local_uploads';
 
       // 1. Fetch from PostgreSQL REST API strictly scoped to authenticated candidate
       final queryParam = currentUserId.isNotEmpty ? '?candidate_id=$currentUserId' : '';
@@ -106,16 +110,24 @@ class CandidateVideoStore {
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
+        debugPrint('[CandidateVideoStore] ✅ Backend API fetch success for Candidate: "$currentUserId". Received ${items.length} videos.');
 
         for (var vid in items) {
           final id = vid['id']?.toString() ?? '';
           if (id.isNotEmpty && processedVideoIds.contains(id)) continue;
           if (id.isNotEmpty) processedVideoIds.add(id);
 
-          final st = (vid['status'] ?? 'pending').toString().toLowerCase();
+          final st = (vid['status'] ?? 'PENDING_QC').toString().toUpperCase().replaceAll(' ', '_');
           String statusText = 'Pending QC';
-          if (st == 'approved' || st == 'qc_approved') statusText = 'Approved';
-          if (st.contains('reject')) statusText = 'Rejected';
+          if (st == 'ASSIGNED_QC' || st == 'IN_REVIEW') {
+            statusText = 'Assigned to QC';
+          } else if (st == 'QC_APPROVED') {
+            statusText = 'QC Approved';
+          } else if (st == 'APPROVED' || st == 'FINAL_APPROVED') {
+            statusText = 'Final Approved 🎉';
+          } else if (st.contains('REJECT')) {
+            statusText = 'Rejected';
+          }
 
           final durSec = parseDurationSeconds(vid['duration']);
 
@@ -129,27 +141,43 @@ class CandidateVideoStore {
             'duration': formatDurationString(durSec),
             'durationSeconds': durSec,
             'reason': vid['rejection_reason'] ?? '',
+            'candidateId': currentUserId,
           });
         }
 
-        if (allVideos.isNotEmpty) {
-          // Update local device cache with authenticated server account data
-          try {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('candidate_local_uploads', jsonEncode(allVideos));
-          } catch (_) {}
-          return allVideos;
+        // Update local device account-specific cache with authenticated server data
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(cacheKey, jsonEncode(allVideos));
+        } catch (e) {
+          debugPrint('[CandidateVideoStore] ⚠️ Failed to update account cache: $e');
         }
+        return allVideos;
+      } else if (res.statusCode == 401 || res.statusCode == 403) {
+        debugPrint('[CandidateVideoStore] 🔒 Auth Error (HTTP ${res.statusCode}): Invalid/Expired JWT Token. ${res.body}');
+      } else {
+        debugPrint('[CandidateVideoStore] ❌ Server/DB Error (HTTP ${res.statusCode}): ${res.body}');
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[CandidateVideoStore] 🚨 API Network Exception: $e');
+    }
 
-    // 2. Load from SharedPreferences local storage ONLY as offline fallback
+    // 2. Load from SharedPreferences candidate-account-specific local cache ONLY as offline fallback
     try {
+      final session = await AuthService.restoreSession();
+      final currentUserId = session?['id'] ?? '';
+      final cacheKey = currentUserId.isNotEmpty ? 'candidate_local_uploads_$currentUserId' : 'candidate_local_uploads';
+
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('candidate_local_uploads');
+      final raw = prefs.getString(cacheKey);
       if (raw != null) {
         final List<dynamic> list = jsonDecode(raw);
         for (var item in list) {
+          final candId = (item['candidateId'] ?? item['candidate_id'] ?? '').toString();
+          if (currentUserId.isNotEmpty && candId.isNotEmpty && candId != currentUserId) {
+            continue; // Prevent videos from another candidate account appearing
+          }
+
           final id = item['id']?.toString() ?? '';
           if (id.isNotEmpty && processedVideoIds.contains(id)) continue;
           if (id.isNotEmpty) processedVideoIds.add(id);
@@ -166,10 +194,14 @@ class CandidateVideoStore {
             'duration': formatDurationString(durSec),
             'durationSeconds': durSec,
             'reason': item['reason'] ?? '',
+            'candidateId': currentUserId,
           });
         }
       }
     } catch (_) {}
+
+    return allVideos;
+  }
 
     // 3. Fetch from Web localStorage platform_qc_submissions
     if (kIsWeb) {

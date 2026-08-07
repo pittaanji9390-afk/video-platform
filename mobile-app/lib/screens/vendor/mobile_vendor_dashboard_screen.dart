@@ -273,7 +273,7 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
               ? '${ApiConstants.baseUrl}/api/v1/videos?vendor_id=$vendorId&limit=100'
               : '${ApiConstants.baseUrl}/api/v1/videos?limit=100');
 
-      final res = await http.get(Uri.parse(videoUrl), headers: headers).timeout(const Duration(seconds: 4));
+      final res = await http.get(Uri.parse(videoUrl), headers: headers).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final List<dynamic> items = data['data'] is List ? data['data'] : (data['data']?['items'] ?? []);
@@ -299,12 +299,18 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           final id = vid['id']?.toString() ?? '';
           if (id.isNotEmpty) processedIds.add(id);
 
-          final rawStatus = (vid['status'] ?? 'pending').toString().toLowerCase();
+          final rawStatus = (vid['status'] ?? 'PENDING_QC').toString().toUpperCase().replaceAll(' ', '_');
           String displayStatus;
-          if (rawStatus == 'approved' || rawStatus == 'qc_approved') {
-            displayStatus = 'Approved';
+          if (rawStatus == 'QC_APPROVED') {
+            displayStatus = 'QC Approved';
             approvedCount++;
-          } else if (rawStatus.contains('reject')) {
+          } else if (rawStatus == 'APPROVED' || rawStatus == 'FINAL_APPROVED') {
+            displayStatus = 'Final Approved 🎉';
+            approvedCount++;
+          } else if (rawStatus == 'ASSIGNED_QC' || rawStatus == 'IN_REVIEW') {
+            displayStatus = 'Assigned to QC';
+            pendingCount++;
+          } else if (rawStatus.contains('REJECT')) {
             displayStatus = 'Rejected';
             rejectedCount++;
           } else {

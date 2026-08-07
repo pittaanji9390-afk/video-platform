@@ -34,7 +34,14 @@ class CandidateController {
    */
   async getCandidates(req, res, next) {
     try {
-      const { vendor_id, vendor_code, page, limit } = req.query;
+      let { vendor_id, vendor_code, page, limit } = req.query;
+
+      // STRICT JWT VENDOR IDENTIFICATION:
+      // If caller is vendor role, FORCE vendor_id and vendor_code to authenticated user token
+      if (req.user && req.user.role === 'vendor') {
+        vendor_id = req.user.vendor_id || req.user.id;
+        vendor_code = req.user.vendor_code || vendor_code;
+      }
 
       const result = await candidateService.getCandidates({
         vendor_id,
