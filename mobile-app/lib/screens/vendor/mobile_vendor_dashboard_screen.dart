@@ -1617,29 +1617,30 @@ class _MobileVendorDashboardScreenState extends State<MobileVendorDashboardScree
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 160,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: GestureDetector(
-                onTap: () => VideoPlaybackDialog.show(context, item),
+            GestureDetector(
+              onTap: () => VideoPlaybackDialog.show(context, item),
+              child: Container(
+                height: 160,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 54),
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      color: Colors.black87,
-                      child: Text(item['duration'] ?? '00:30', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        color: Colors.black87,
+                        child: Text(item['duration'] ?? '00:30', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),
