@@ -215,7 +215,10 @@ class AuthService extends ChangeNotifier {
     await prefs.remove(keyUserEmail);
     await prefs.remove(keyUserId);
     await prefs.remove(keyVendorId);
+    await prefs.remove(keyVendorCode);
+    await prefs.remove(keyUserPhone);
     await prefs.remove(keyIsDemoMode);
+    await prefs.remove('candidate_local_uploads');
   }
 
   /// Returns the stored user ID (empty string if not set).

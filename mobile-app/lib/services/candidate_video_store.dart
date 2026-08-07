@@ -150,11 +150,18 @@ class CandidateVideoStore {
             'durationSeconds': durSec,
             'reason': vid['rejection_reason'] ?? '',
           });
+        if (allVideos.isNotEmpty) {
+          // Update local device cache with authenticated server account data
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('candidate_local_uploads', jsonEncode(allVideos));
+          } catch (_) {}
+          return allVideos;
         }
       }
     } catch (_) {}
 
-    // 2. Load from SharedPreferences local storage
+    // 2. Load from SharedPreferences local storage ONLY as offline fallback
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('candidate_local_uploads');

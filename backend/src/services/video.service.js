@@ -75,11 +75,21 @@ class VideoService {
       let validCandidateId = candidate_id;
       let validVendorId = vendor_id;
 
-      // If vendor_id is missing, look up from candidate record
+      // If vendor_id is missing, look up from candidate record or active vendors table
       if (!validVendorId && validCandidateId) {
-        const candVendorRes = await db.query('SELECT vendor_id FROM candidates WHERE id = $1', [validCandidateId]);
+        const candVendorRes = await db.query(
+          'SELECT vendor_id FROM candidates WHERE id = $1 AND vendor_id IS NOT NULL UNION SELECT vendor_id FROM users WHERE id = $1 AND vendor_id IS NOT NULL',
+          [validCandidateId]
+        );
         if (candVendorRes.rowCount > 0 && candVendorRes.rows[0].vendor_id) {
           validVendorId = candVendorRes.rows[0].vendor_id;
+        }
+      }
+
+      if (!validVendorId) {
+        const venRes = await db.query('SELECT id FROM vendors WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
+        if (venRes.rowCount > 0) {
+          validVendorId = venRes.rows[0].id;
         }
       }
 
@@ -164,7 +174,7 @@ class VideoService {
       let selectQuery = `
         SELECT v.id, v.candidate_id, c.full_name AS candidate_name, v.vendor_id, ven.company_name AS vendor_name, ven.vendor_code,
                v.title, v.description, v.s3_url, v.file_name, v.local_path, v.file_size, v.duration,
-               v.environment_tag, v.latitude, v.longitude, v.device_id, v.recording_date, v.status,
+               v.environment_tag, v.rejection_reason, v.latitude, v.longitude, v.device_id, v.recording_date, v.status,
                qr.audio_score, qr.lighting_score, qr.framing_score, qr.env_match_score, qr.qc_comments, qr.admin_comments,
                v.created_at, v.updated_at
         FROM videos v
@@ -183,15 +193,23 @@ class VideoService {
         countQuery += candCond;
         selectQuery += candCond;
       }
-      if (vendor_id) {
-        params.push(vendor_id);
-        countQuery += ` AND v.vendor_id = $${params.length}`;
-        selectQuery += ` AND v.vendor_id = $${params.length}`;
-      }
-      if (vendor_code) {
-        params.push(vendor_code);
-        countQuery += ` AND (LOWER(ven.vendor_code) = LOWER($${params.length}) OR v.vendor_id = $${params.length})`;
-        selectQuery += ` AND (LOWER(ven.vendor_code) = LOWER($${params.length}) OR v.vendor_id = $${params.length})`;
+      if (vendor_id || vendor_code) {
+        if (vendor_id && vendor_code) {
+          params.push(vendor_id, vendor_code);
+          const venCond = ` AND (v.vendor_id = $${params.length - 1} OR c.vendor_id = $${params.length - 1} OR ven.id = $${params.length - 1} OR LOWER(ven.vendor_code) = LOWER($${params.length}))`;
+          countQuery += venCond;
+          selectQuery += venCond;
+        } else if (vendor_id) {
+          params.push(vendor_id);
+          const venCond = ` AND (v.vendor_id = $${params.length} OR c.vendor_id = $${params.length} OR ven.id = $${params.length} OR LOWER(ven.vendor_code) = LOWER($${params.length}))`;
+          countQuery += venCond;
+          selectQuery += venCond;
+        } else {
+          params.push(vendor_code);
+          const venCond = ` AND (LOWER(ven.vendor_code) = LOWER($${params.length}) OR v.vendor_id = $${params.length} OR c.vendor_id = $${params.length})`;
+          countQuery += venCond;
+          selectQuery += venCond;
+        }
       }
       if (status) {
         params.push(status);
