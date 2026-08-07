@@ -361,8 +361,9 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
         await prefs.setString('candidate_local_uploads', jsonEncode(localList));
       }
     } catch (_) {}
-
-        // Save Candidate Notification
+    // Save Candidate Notification on Web
+    if (kIsWeb) {
+      try {
         final rawNotifs = web.localStorageGet('platform_candidate_notifications');
         List<dynamic> notifList = [];
         if (rawNotifs != null) {
@@ -385,10 +386,10 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
         web.localStorageSet('platform_candidate_notifications', jsonEncode(notifList));
 
         final bc = web.BroadcastChannelStub('platform_realtime_channel');
-        bc.postMessage(jsonEncode({'type': 'QC_STATUS_UPDATED', 'payload': list}));
+        bc.postMessage(jsonEncode({'type': 'QC_STATUS_UPDATED', 'payload': []}));
         bc.close();
       } catch (e) {
-        debugPrint('QC submission error: $e');
+        debugPrint('QC notification web sync error: $e');
       }
     }
 
