@@ -108,26 +108,6 @@ class CandidateVideoStore {
         final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
 
         for (var vid in items) {
-          final cId = vid['candidate_id']?.toString() ?? vid['candidateId']?.toString() ?? '';
-          final cEmail = vid['email']?.toString() ?? '';
-
-          // Candidate Scoping: verify candidate ID match (handling string/int ID formats like '1' vs 'USR-1')
-          if (cId.isNotEmpty && currentUserId.isNotEmpty) {
-            final cIdLower = cId.toLowerCase();
-            final curIdLower = currentUserId.toLowerCase();
-            final cIdNum = cId.replaceAll(RegExp(r'[^0-9]'), '');
-            final curIdNum = currentUserId.replaceAll(RegExp(r'[^0-9]'), '');
-
-            final isDirectMatch = cIdLower == curIdLower ||
-                (cIdNum.isNotEmpty && curIdNum.isNotEmpty && cIdNum == curIdNum);
-
-            if (!isDirectMatch && cEmail.isNotEmpty && currentUserEmail.isNotEmpty) {
-              if (cEmail.toLowerCase() != currentUserEmail.toLowerCase()) {
-                continue;
-              }
-            }
-          }
-
           final id = vid['id']?.toString() ?? '';
           if (id.isNotEmpty && processedVideoIds.contains(id)) continue;
           if (id.isNotEmpty) processedVideoIds.add(id);
