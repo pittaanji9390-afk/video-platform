@@ -77,6 +77,24 @@ class AuthController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/v1/auth/me
+   */
+  async getMe(req, res, next) {
+    try {
+      const userId = req.user?.id;
+      const role = req.user?.role;
+      const email = req.user?.email;
+      const profile = await authService.getProfile(userId, role, email);
+      return res.status(200).json({
+        status: 'success',
+        data: profile,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 module.exports = new AuthController();

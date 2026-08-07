@@ -47,10 +47,7 @@ router.post('/logout', authenticateJWT, (req, res) => {
     message: 'User logged out',
   });
 
-  return res.status(200).json({
-    status: 'success',
-    message: 'Logged out successfully. Token revoked.',
-  });
-});
+// GET /api/v1/auth/me - Current user profile details
+router.get('/me', authenticateJWT, (req, res, next) => authController.getMe(req, res, next));
 
 module.exports = router;
