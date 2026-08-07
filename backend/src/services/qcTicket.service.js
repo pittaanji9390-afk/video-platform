@@ -21,20 +21,37 @@ class QCTicketService {
     const ticketCode = `TKT-${Math.floor(10000 + Math.random() * 90000)}`;
 
     try {
-      const insertQuery = `
-        INSERT INTO qc_tickets (
-          ticket_code, video_id, candidate_id, vendor_id, project_id, upload_date, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'pending_qc', NOW(), NOW())
-        RETURNING *
-      `;
-      const res = await db.query(insertQuery, [
-        ticketCode,
-        videoId,
-        candidateId,
-        vendorId,
-        projectId,
-        uploadDate,
-      ]);
+      let res;
+      try {
+        const insertQuery = `
+          INSERT INTO qc_tickets (
+            ticket_code, video_id, candidate_id, vendor_id, project_id, upload_date, status, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, 'pending_qc', NOW(), NOW())
+          RETURNING *
+        `;
+        res = await db.query(insertQuery, [
+          ticketCode,
+          videoId,
+          candidateId,
+          vendorId,
+          projectId,
+          uploadDate,
+        ]);
+      } catch (_) {
+        const fallbackQuery = `
+          INSERT INTO qc_tickets (
+            ticket_code, video_id, candidate_id, vendor_id, upload_date, status, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, 'pending_qc', NOW(), NOW())
+          RETURNING *
+        `;
+        res = await db.query(fallbackQuery, [
+          ticketCode,
+          videoId,
+          candidateId,
+          vendorId,
+          uploadDate,
+        ]);
+      }
 
       const ticket = res.rows[0];
 

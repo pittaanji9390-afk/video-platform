@@ -32,22 +32,14 @@ class NotificationService {
         }
       }
 
-      // 2. Insert Notification into Database
+      // 2. Insert Notification into Database (Unified Schema Insert)
       const insertQuery = `
         INSERT INTO notifications (
-          user_id, user_role, title, message, event_type, related_video_id, related_task_id, is_read, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, NOW())
+          user_id, user_role, role, title, message, event_type, type, related_video_id, related_task_id, is_read, created_at
+        ) VALUES ($1, $2, $2, $3, $4, $5, $5, $6, $7, FALSE, NOW())
         RETURNING *
       `;
-      const res = await db.query(insertQuery, [
-        user_id,
-        role,
-        title,
-        message,
-        type,
-        video_id,
-        task_id,
-      ]);
+      const res = await db.query(insertQuery, [user_id, role, title, message, type, video_id, task_id]);
 
       const notif = res.rows[0];
       const payload = {
@@ -136,7 +128,7 @@ class NotificationService {
   async getNotifications({ user_id, role }) {
     try {
       let queryText = `
-        SELECT id, user_id, user_role, title, message, event_type, related_video_id, related_task_id, is_read, created_at
+        SELECT id, user_id, COALESCE(user_role, role) AS user_role, title, message, COALESCE(event_type, type, 'system') AS event_type, related_video_id, related_task_id, is_read, created_at
         FROM notifications
         WHERE is_read = FALSE
       `;
@@ -149,7 +141,7 @@ class NotificationService {
 
       if (role) {
         params.push(role);
-        queryText += ` AND (user_role = $${params.length} OR user_role = 'all')`;
+        queryText += ` AND (COALESCE(user_role, role) = $${params.length} OR COALESCE(user_role, role) = 'all')`;
       }
 
       queryText += ` ORDER BY created_at DESC LIMIT 50`;

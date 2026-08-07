@@ -1,6 +1,9 @@
 # Node.js Express Backend Dockerfile
 FROM node:18-alpine
 
+# Install ffmpeg and ffprobe for video processing
+RUN apk add --no-cache ffmpeg
+
 WORKDIR /app
 
 # Copy package manifests first for caching layers
