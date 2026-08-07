@@ -233,6 +233,85 @@ class VideoService {
   }
 
   /**
+   * Admin Final Approval / Rejection Update + Candidate & Vendor Real-Time Notifications
+   */
+  async updateVideoStatus(id, status, rejectionReason = '', actorId = null) {
+    try {
+      const normalizedStatus = status ? status.toString().toUpperCase() : 'APPROVED';
+      const isApproved = normalizedStatus.includes('APPROV');
+      const finalStatus = isApproved ? 'APPROVED' : 'REJECTED';
+
+      const updateQuery = `
+        UPDATE videos
+        SET status = $1, rejection_reason = $2, updated_at = NOW()
+        WHERE (id = $3 OR id::text = $3) AND deleted_at IS NULL
+        RETURNING *
+      `;
+      const res = await db.query(updateQuery, [finalStatus, isApproved ? null : rejectionReason, id]);
+      if (res.rowCount === 0) throw new Error('Video not found');
+
+      const video = res.rows[0];
+
+      // Update corresponding QC Ticket status if present
+      await db.query(
+        `UPDATE qc_tickets SET status = $1, updated_at = NOW() WHERE video_id = $2 OR video_id::text = $2`,
+        [finalStatus, video.id]
+      ).catch(() => {});
+
+      // Send Notification to Candidate
+      if (video.candidate_id) {
+        const notifTitle = isApproved ? 'Video Final Approved 🎉' : 'Video Review Update ⚠️';
+        const notifMsg = isApproved
+          ? `Your video "${video.title || 'Recording'}" has received final Admin approval!`
+          : `Your video "${video.title || 'Recording'}" requires revision: ${rejectionReason || 'Admin criteria not met'}.`;
+
+        await notificationService.createNotification({
+          user_id: video.candidate_id,
+          role: 'candidate',
+          title: notifTitle,
+          message: notifMsg,
+          video_id: video.id,
+          type: isApproved ? 'admin_approved' : 'admin_rejected',
+          color: isApproved ? '#059669' : '#DC2626',
+        }).catch(() => {});
+      }
+
+      // Send Notification to Vendor
+      if (video.vendor_id) {
+        await notificationService.createNotification({
+          user_id: video.vendor_id,
+          role: 'vendor',
+          title: isApproved ? 'Candidate Video Approved 🏆' : 'Candidate Video Rejected ⚠️',
+          message: `Video "${video.title || 'Recording'}" status updated to ${finalStatus}.`,
+          video_id: video.id,
+          type: 'vendor_video_update',
+          color: isApproved ? '#059669' : '#DC2626',
+        }).catch(() => {});
+      }
+
+      // Audit Log
+      try {
+        await db.query(
+          `INSERT INTO audit_logs (actor_id, actor_role, action, resource_type, resource_id, details, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [
+            actorId || '00000000-0000-0000-0000-000000000001',
+            'admin',
+            isApproved ? 'ADMIN_VIDEO_APPROVED' : 'ADMIN_VIDEO_REJECTED',
+            'video',
+            video.id,
+            JSON.stringify({ status: finalStatus, rejectionReason }),
+          ]
+        );
+      } catch (_) {}
+
+      return video;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  /**
    * Delete Video - soft delete DB record + physical file deletion
    */
   async deleteVideo(id) {

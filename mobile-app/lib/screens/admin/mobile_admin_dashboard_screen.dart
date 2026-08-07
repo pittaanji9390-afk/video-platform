@@ -422,22 +422,20 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
       final headers = await AuthService.getAuthHeaders();
       final videoId = id.length > 8 ? id : id;
 
+      final statusUrl = Uri.parse('$_apiBaseUrl/videos/$videoId/status');
+      await http.patch(
+        statusUrl,
+        headers: headers,
+        body: jsonEncode({
+          'status': targetStatus,
+          'rejection_reason': isReject ? 'Quality standards not met during Admin review' : '',
+        }),
+      ).timeout(const Duration(seconds: 3));
+
       if (isReject) {
         // Physical file delete call on rejection
         final delUrl = Uri.parse('$_apiBaseUrl/videos/$videoId');
         await http.delete(delUrl, headers: headers).timeout(const Duration(seconds: 3));
-      } else {
-        // Final approval status update call
-        final appUrl = Uri.parse('$_apiBaseUrl/qc-reviews');
-        await http.post(
-          appUrl,
-          headers: headers,
-          body: jsonEncode({
-            'video_id': videoId,
-            'status': 'approved',
-            'reviewer_name': 'System Administrator',
-          }),
-        ).timeout(const Duration(seconds: 3));
       }
     } catch (_) {}
 

@@ -246,6 +246,28 @@ class VideoController {
   }
 
   /**
+   * PATCH /api/v1/videos/:id/status - Admin or QC update video status
+   */
+  async updateVideoStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { status, rejection_reason, reject_reason, reason } = req.body;
+      const rejReason = rejection_reason || reject_reason || reason || '';
+      const actorId = req.user?.id;
+
+      const video = await videoService.updateVideoStatus(id, status, rejReason, actorId);
+
+      return res.status(200).json({
+        status: 'success',
+        message: `Video ${id} status updated to ${video.status}`,
+        data: video,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Generate signed URL for video access
    */
   async getSignedUrl(req, res, next) {
