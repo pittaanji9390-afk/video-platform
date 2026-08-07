@@ -47,7 +47,8 @@ router.post('/logout', authenticateJWT, (req, res) => {
     message: 'User logged out',
   });
 
-// GET /api/v1/auth/me - Current user profile details
-router.get('/me', authenticateJWT, (req, res, next) => authController.getMe(req, res, next));
+  // GET /api/v1/auth/me - Current user profile details
+  router.get('/me', authenticateJWT, (req, res, next) => authController.getMe(req, res, next));
 
-module.exports = router;
+  module.exports = router;
+})
