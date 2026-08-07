@@ -206,7 +206,14 @@ CREATE TABLE reviewer_activity (
     reviewer_email VARCHAR(255),
     assigned_count INT DEFAULT 0,
     completed_count INT DEFAULT 0,
-    last_active_at TIMESTAMPTZ DEFAULT NOW()
+    is_active BOOLEAN DEFAULT TRUE,
+    is_available BOOLEAN DEFAULT TRUE,
+    last_login_at TIMESTAMPTZ DEFAULT NOW(),
+    last_dashboard_activity_at TIMESTAMPTZ DEFAULT NOW(),
+    last_review_submission_at TIMESTAMPTZ,
+    last_active_timestamp TIMESTAMPTZ DEFAULT NOW(),
+    last_active_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE admin_qc_configs (

@@ -47,9 +47,14 @@ const patches = [
 
   // 5. Drop old qc_reviews status constraint and recreate
   `ALTER TABLE qc_reviews DROP CONSTRAINT IF EXISTS chk_qc_reviews_status`,
-  `ALTER TABLE qc_reviews ADD CONSTRAINT chk_qc_reviews_status CHECK (
-    status IN ('approved','rejected','qc_approved','qc_rejected','QC_APPROVED','QC_REJECTED')
-  )`,
+  // 5b. Ensure reviewer_activity has activity timestamp columns
+  `ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`,
+  `ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS is_available BOOLEAN DEFAULT TRUE`,
+  `ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ DEFAULT NOW()`,
+  `ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS last_dashboard_activity_at TIMESTAMPTZ DEFAULT NOW()`,
+  `ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS last_review_submission_at TIMESTAMPTZ`,
+  `ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS last_active_timestamp TIMESTAMPTZ DEFAULT NOW()`,
+  `ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
 
   // 6. Add password_hash to candidates
   `ALTER TABLE candidates ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`,
