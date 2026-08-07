@@ -150,6 +150,8 @@ class CandidateVideoStore {
             'durationSeconds': durSec,
             'reason': vid['rejection_reason'] ?? '',
           });
+        }
+
         if (allVideos.isNotEmpty) {
           // Update local device cache with authenticated server account data
           try {
