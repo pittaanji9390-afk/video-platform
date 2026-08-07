@@ -11,9 +11,19 @@ async function seedNeonDatabase() {
     const candidatePasswordHash = await bcrypt.hash('candidate123', 10);
     const qcPasswordHash = await bcrypt.hash('qcteam123', 10);
 
-    // Ensure password_hash column exists on all tables
+    // Ensure password_hash, password, user_role, and role columns exist on all tables
     await db.query('ALTER TABLE vendors ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE vendors ADD COLUMN IF NOT EXISTS password VARCHAR(255);').catch(() => {});
     await db.query('ALTER TABLE candidates ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE candidates ADD COLUMN IF NOT EXISTS password VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE admins ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE admins ADD COLUMN IF NOT EXISTS password VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE reviewer_activity ADD COLUMN IF NOT EXISTS password VARCHAR(255);').catch(() => {});
+    await db.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_role VARCHAR(50);').catch(() => {});
+    await db.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS role VARCHAR(50);').catch(() => {});
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS reviewer_activity (

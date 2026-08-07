@@ -73,24 +73,38 @@ class VideoService {
       }
 
       let validCandidateId = candidate_id;
-      let validVendorId = vendor_id;
+      let validVendorId = null;
 
-      // If vendor_id is missing, look up from candidate record or active vendors table
-      if (!validVendorId && validCandidateId) {
+      // 1. Resolve candidate's vendor_id strictly from candidates or users table
+      if (validCandidateId) {
         const candVendorRes = await db.query(
-          'SELECT vendor_id FROM candidates WHERE id = $1 AND vendor_id IS NOT NULL UNION SELECT vendor_id FROM users WHERE id = $1 AND vendor_id IS NOT NULL',
+          `SELECT vendor_id FROM candidates WHERE (id = $1 OR id::text = $1::text) AND vendor_id IS NOT NULL
+           UNION
+           SELECT vendor_id FROM users WHERE (id = $1 OR id::text = $1::text) AND vendor_id IS NOT NULL`,
           [validCandidateId]
-        );
+        ).catch(() => ({ rowCount: 0, rows: [] }));
+
         if (candVendorRes.rowCount > 0 && candVendorRes.rows[0].vendor_id) {
-          validVendorId = candVendorRes.rows[0].vendor_id;
+          const checkVen = await db.query('SELECT id FROM vendors WHERE id = $1 OR id::text = $1::text', [candVendorRes.rows[0].vendor_id]).catch(() => ({ rowCount: 0, rows: [] }));
+          if (checkVen.rowCount > 0) {
+            validVendorId = checkVen.rows[0].id;
+          }
         }
       }
 
-      if (!validVendorId) {
-        const venRes = await db.query('SELECT id FROM vendors WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1');
-        if (venRes.rowCount > 0) {
-          validVendorId = venRes.rows[0].id;
+      // 2. If vendor_id passed directly in request body, validate against vendors table
+      if (!validVendorId && vendor_id) {
+        const checkPassedVen = await db.query('SELECT id FROM vendors WHERE id = $1 OR id::text = $1::text OR LOWER(vendor_code) = LOWER($1::text)', [vendor_id]).catch(() => ({ rowCount: 0, rows: [] }));
+        if (checkPassedVen.rowCount > 0) {
+          validVendorId = checkPassedVen.rows[0].id;
         }
+      }
+
+      // 3. STRICT ENFORCEMENT: Candidate MUST have a valid vendor relationship in vendors table
+      if (!validVendorId) {
+        const err = new Error('Candidate is not associated with a valid vendor in the system. Upload rejected.');
+        err.statusCode = 400;
+        throw err;
       }
 
       let videoRecord;
@@ -182,7 +196,7 @@ class VideoService {
   async getAllVideos({ candidate_id, vendor_id, vendor_code, status, page = 1, limit = 10 }) {
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     try {
-      let countQuery = 'SELECT COUNT(*) FROM videos v LEFT JOIN vendors ven ON v.vendor_id = ven.id WHERE v.deleted_at IS NULL';
+      let countQuery = 'SELECT COUNT(*) FROM videos v LEFT JOIN candidates c ON v.candidate_id = c.id LEFT JOIN vendors ven ON v.vendor_id = ven.id WHERE v.deleted_at IS NULL';
       let selectQuery = `
         SELECT v.id, v.candidate_id, c.full_name AS candidate_name, v.vendor_id, ven.company_name AS vendor_name, ven.vendor_code,
                v.title, v.description, v.s3_url, v.file_name, v.local_path, v.file_size, v.duration,
