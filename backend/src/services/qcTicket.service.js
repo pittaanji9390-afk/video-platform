@@ -225,9 +225,33 @@ class QCTicketService {
           ]).catch(() => {});
         }
 
+        // Update last_active_timestamp for selected reviewer
+        await db.query(
+          `UPDATE reviewer_activity SET last_active_timestamp = NOW(), is_available = TRUE WHERE reviewer_id = $1 OR reviewer_email = $2`,
+          [selectedReviewer.reviewer_id, selectedReviewer.reviewer_email || '']
+        ).catch(() => {});
+
         // Increment local workload counter for balanced batch distribution
         workloadMap[selectedReviewer.reviewer_id] = (workloadMap[selectedReviewer.reviewer_id] || 0) + 1;
         assignedResults.push(ticket);
+      }
+
+      // Verification log check 5 seconds post-assignment
+      if (assignedResults.length > 0) {
+        setTimeout(async () => {
+          try {
+            const checkIds = assignedResults.map(t => t.id);
+            const verifyRes = await db.query(
+              `SELECT id, ticket_code, status, assigned_reviewer_id, assigned_reviewer_name FROM qc_tickets WHERE id = ANY($1::uuid[])`,
+              [checkIds]
+            );
+            logger.info(`🔍 [DB State Verification +5s] Assigned Tickets Persistence Check:`, {
+              totalChecked: verifyRes.rowCount,
+              assignedQC: verifyRes.rows.filter(r => r.status === 'ASSIGNED_QC' && r.assigned_reviewer_id !== null).length,
+              sample: verifyRes.rows[0],
+            });
+          } catch (_) {}
+        }, 5000);
       }
 
       logger.info(`✓ Least Workload Algorithm Completed: Equally distributed ${assignedResults.length} tickets across active QC team.`);
@@ -252,11 +276,12 @@ class QCTicketService {
 
       const timeoutHours = parseInt(await this.getQCConfigValue('inactivity_timeout_hours', '24'), 10) || 24;
 
-      // 1. Find reviewers with no activity for > X hours
+      // 1. Find reviewers with explicit inactivity for > X hours (excluding NULL timestamps)
       const inactiveQuery = `
         SELECT reviewer_id, reviewer_name, reviewer_email, last_active_timestamp
         FROM reviewer_activity
         WHERE is_active = TRUE
+          AND last_active_timestamp IS NOT NULL
           AND last_active_timestamp < NOW() - ($1 || ' hours')::INTERVAL
       `;
       const inactiveRes = await db.query(inactiveQuery, [timeoutHours.toString()]);
@@ -270,15 +295,17 @@ class QCTicketService {
       const auditLogs = [];
 
       for (const inactive of inactiveReviewers) {
-        // 2. Find pending/unreviewed tickets assigned to inactive reviewer (Exclude in_review, qc_approved, qc_rejected, closed)
+        // 2. Find ONLY tickets assigned > 24h ago to inactive reviewer
         const pendingTicketsQuery = `
           SELECT id, video_id, ticket_code, assigned_reviewer_id, assigned_reviewer_name
           FROM qc_tickets
           WHERE assigned_reviewer_id = $1
-            AND status = 'pending_qc'
+            AND status IN ('pending_qc', 'ASSIGNED_QC')
+            AND (assigned_at IS NOT NULL AND assigned_at < NOW() - ($2 || ' hours')::INTERVAL)
+            AND (updated_at IS NOT NULL AND updated_at < NOW() - ($2 || ' hours')::INTERVAL)
             AND deleted_at IS NULL
         `;
-        const ticketsRes = await db.query(pendingTicketsQuery, [inactive.reviewer_id]);
+        const ticketsRes = await db.query(pendingTicketsQuery, [inactive.reviewer_id, timeoutHours.toString()]);
         const ticketsToReassign = ticketsRes.rows;
 
         if (ticketsToReassign.length > 0) {
