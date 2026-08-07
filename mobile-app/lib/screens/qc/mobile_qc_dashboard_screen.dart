@@ -72,6 +72,12 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
             _fetchRealQCData();
           }
         });
+        final eventSource = web.EventSourceStub('${ApiConstants.baseUrl}/api/v1/notifications/stream');
+        eventSource.onMessage.listen((event) {
+          if (mounted) {
+            _fetchRealQCData();
+          }
+        });
       } catch (_) {}
     }
   }
@@ -129,7 +135,12 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
               final assignedTo = (t['assigned_reviewer_name'] ?? t['assignedTo'] ?? t['assigned_to'] ?? '').toString();
               final assignedReviewerId = (t['assigned_reviewer_id'] ?? t['assigned_reviewer'] ?? '').toString();
 
-              if (assignedReviewerId.isNotEmpty && assignedReviewerId != reviewerId && reviewerId.isNotEmpty) {
+              final bool isAssignedToMe = (assignedReviewerId == reviewerId) ||
+                  (reviewerId.isNotEmpty && assignedReviewerId.isEmpty) ||
+                  (userEmail.isNotEmpty && assignedTo.toLowerCase().contains(userEmail)) ||
+                  (userName.isNotEmpty && assignedTo.toLowerCase().contains(userName));
+
+              if (assignedReviewerId.isNotEmpty && !isAssignedToMe) {
                 continue; // Skip tickets assigned to another reviewer
               }
 

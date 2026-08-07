@@ -52,8 +52,9 @@ class QCTicketController {
   async getMyTickets(req, res, next) {
     try {
       // STRICT REVIEWER ID SCOPING:
-      // For QC Team role, ALWAYS force reviewerId filter to authenticated JWT user ID (req.user.id)
-      const reviewerId = (req.user && req.user.role === 'qc_team') ? req.user.id : (req.user?.id || req.query.reviewer_id);
+      // For QC role, ALWAYS force reviewerId filter to authenticated JWT user ID (req.user.id)
+      const isQcRole = req.user && (req.user.role === 'qc' || req.user.role === 'qc_team');
+      const reviewerId = isQcRole ? req.user.id : (req.user?.id || req.query.reviewer_id);
       const statusFilter = req.query.status || null;
 
       const result = await qcTicketService.getMyAssignedTickets(reviewerId, statusFilter);

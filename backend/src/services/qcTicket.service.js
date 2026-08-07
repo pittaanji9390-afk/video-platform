@@ -138,12 +138,16 @@ class QCTicketService {
       }
 
       if (!ticketIds || ticketIds.length === 0) return [];
-      // 1. Fetch all active & available QC reviewers
+      // 1. Fetch all active & available QC reviewers from reviewer_activity and users tables
       const reviewersRes = await db.query(`
         SELECT reviewer_id, reviewer_name, reviewer_email
         FROM reviewer_activity
         WHERE is_active = TRUE AND is_available = TRUE
-        ORDER BY created_at ASC
+        UNION
+        SELECT id AS reviewer_id, full_name AS reviewer_name, email AS reviewer_email
+        FROM users
+        WHERE role IN ('qc', 'qc_team') AND is_active = TRUE
+        ORDER BY reviewer_id ASC
       `);
 
       let reviewers = reviewersRes.rows;
@@ -391,7 +395,16 @@ class QCTicketService {
       const params = [];
       if (reviewerId) {
         params.push(reviewerId);
-        queryText += ` AND t.assigned_reviewer_id = $${params.length}`;
+        queryText += ` AND (
+          t.assigned_reviewer_id = $${params.length}
+          OR t.assigned_reviewer_id::text = $${params.length}::text
+          OR t.assigned_reviewer_id IN (
+            SELECT reviewer_id FROM reviewer_activity WHERE reviewer_id = $${params.length} OR reviewer_id::text = $${params.length}::text OR LOWER(reviewer_email) = LOWER($${params.length}::text)
+            UNION
+            SELECT id FROM users WHERE id = $${params.length} OR id::text = $${params.length}::text OR LOWER(email) = LOWER($${params.length}::text)
+          )
+          OR LOWER(t.assigned_reviewer_name) LIKE LOWER($${params.length}::text)
+        )`;
       }
 
       if (filterStatus) {

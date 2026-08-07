@@ -17,7 +17,8 @@ class VideoProcessor {
    * @returns {Object} { success, metadataRemoved }
    */
   static stripExif(inputPath) {
-    const tempOutput = `${inputPath}.tmp`;
+    const ext = path.extname(inputPath) || '.mp4';
+    const tempOutput = inputPath.replace(new RegExp(`\\${ext}$`, 'i'), `_tmp${ext}`);
 
     try {
       // Use ffmpeg to remove all metadata while preserving video/audio streams
@@ -69,8 +70,9 @@ class VideoProcessor {
       margin = 20,
     } = options;
 
-    const outputPath = inputPath.replace(/(\\.\\w+)$/, '_watermarked$1');
-    const tempOutput = `${outputPath}.tmp`;
+    const ext = path.extname(inputPath) || '.mp4';
+    const outputPath = inputPath.replace(new RegExp(`\\${ext}$`, 'i'), `_watermarked${ext}`);
+    const tempOutput = outputPath.replace(new RegExp(`\\${ext}$`, 'i'), `_tmp${ext}`);
 
     try {
       // Build position filter based on options
@@ -189,7 +191,7 @@ class VideoProcessor {
    */
   static isAvailable() {
     try {
-      execSync('which ffmpeg', { stdio: 'ignore' });
+      execSync('ffmpeg -version', { stdio: 'ignore' });
       return true;
     } catch {
       return false;
