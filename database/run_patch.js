@@ -91,26 +91,38 @@ const patches = [
   `ALTER TABLE videos ADD COLUMN IF NOT EXISTS rejection_reason TEXT`,
 
   // 12. Seed default system vendor
-  `INSERT INTO vendors (id, vendor_code, company_name, contact_person, email, is_active, created_at, updated_at)
+  `INSERT INTO vendors (id, vendor_code, company_name, contact_person, email, password_hash, is_active, created_at, updated_at)
    VALUES (
      '00000000-0000-0000-0000-000000000003',
-     'SYSTEM_VENDOR',
-     'Default System Vendor',
-     'System Admin',
-     'vendor@video-platform.local',
+     'VENDOR001',
+     'Apex Video Solutions',
+     'Vendor Manager',
+     'vendor@videoplatform.com',
+     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
      TRUE, NOW(), NOW()
-   ) ON CONFLICT (email) DO NOTHING`,
+   ) ON CONFLICT (email) DO UPDATE
+       SET vendor_code = 'VENDOR001',
+           company_name = 'Apex Video Solutions',
+           password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+           is_active = TRUE,
+           updated_at = NOW()`,
 
   // 13. Seed default system candidate
-  `INSERT INTO candidates (id, vendor_id, full_name, email, phone, is_active, created_at, updated_at)
+  `INSERT INTO candidates (id, vendor_id, full_name, email, phone, password_hash, is_active, created_at, updated_at)
    VALUES (
      '00000000-0000-0000-0000-000000000002',
      '00000000-0000-0000-0000-000000000003',
-     'Default System Candidate',
-     'candidate@video-platform.local',
-     '+10000000000',
+     'John Candidate',
+     'candidate@videoplatform.com',
+     '+19876543210',
+     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
      TRUE, NOW(), NOW()
-   ) ON CONFLICT (id) DO NOTHING`,
+   ) ON CONFLICT (email) DO UPDATE
+       SET full_name = 'John Candidate',
+           phone = '+19876543210',
+           password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+           is_active = TRUE,
+           updated_at = NOW()`,
 
   // 14. Ensure unified users table exists for role-based authentication
   `CREATE TABLE IF NOT EXISTS users (
@@ -126,10 +138,38 @@ const patches = [
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
 
-  // 15. Upsert unified admin user into users table
+  // 15. Upsert unified admin users into admins and users table
+  `INSERT INTO admins (id, email, password_hash, full_name, username, is_active, created_at, updated_at)
+   VALUES (
+     '00000000-0000-0000-0000-000000000001',
+     'admin@videoplatform.com',
+     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+     'System Administrator',
+     'admin',
+     TRUE, NOW(), NOW()
+   ) ON CONFLICT (email) DO UPDATE
+       SET password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+           full_name = 'System Administrator',
+           is_active = TRUE,
+           updated_at = NOW()`,
+
   `INSERT INTO users (id, email, password_hash, full_name, role, is_active, created_at, updated_at)
    VALUES (
      '00000000-0000-0000-0000-000000000001',
+     'admin@videoplatform.com',
+     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+     'System Administrator',
+     'admin',
+     TRUE, NOW(), NOW()
+   ) ON CONFLICT (email) DO UPDATE
+       SET password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+           role = 'admin',
+           is_active = TRUE,
+           updated_at = NOW()`,
+
+  `INSERT INTO users (id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+   VALUES (
+     '00000000-0000-0000-0000-000000000005',
      'admin@gmail.com',
      '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
      'System Administrator',
@@ -138,6 +178,35 @@ const patches = [
    ) ON CONFLICT (email) DO UPDATE
        SET password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
            role = 'admin',
+           is_active = TRUE,
+           updated_at = NOW()`,
+
+  // 16. Upsert dedicated QC Team accounts into users table
+  `INSERT INTO users (id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+   VALUES (
+     '00000000-0000-0000-0000-000000000004',
+     'qc@videoplatform.com',
+     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+     'QC Team Lead',
+     'qc_team',
+     TRUE, NOW(), NOW()
+   ) ON CONFLICT (email) DO UPDATE
+       SET password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+           role = 'qc_team',
+           is_active = TRUE,
+           updated_at = NOW()`,
+
+  `INSERT INTO users (id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+   VALUES (
+     '00000000-0000-0000-0000-000000000006',
+     'qc@gmail.com',
+     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+     'QC Team Lead',
+     'qc_team',
+     TRUE, NOW(), NOW()
+   ) ON CONFLICT (email) DO UPDATE
+       SET password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+           role = 'qc_team',
            is_active = TRUE,
            updated_at = NOW()`,
 ];
