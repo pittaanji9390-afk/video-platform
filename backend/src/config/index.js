@@ -1,31 +1,26 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-if (!process.env.JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET environment variable is required');
-  process.exit(1);
-}
-if (!process.env.JWT_REFRESH_SECRET) {
-  console.error('FATAL: JWT_REFRESH_SECRET environment variable is required');
-  process.exit(1);
-}
+const jwtSecret = process.env.JWT_SECRET || 'super_secret_jwt_access_token_key_2026_video_platform';
+const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET || 'super_secret_jwt_refresh_token_key_2026_video_platform';
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_FBwOPsI5L4fE@ep-young-leaf-axv340na-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
 
 module.exports = {
-  port: process.env.PORT || 5002,
-  nodeEnv: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env.PORT, 10) || 5002,
+  nodeEnv: process.env.NODE_ENV || 'production',
   database: {
-    url: process.env.DB_SSL === 'true' ? process.env.DATABASE_URL : null,
-    host: process.env.DB_HOST || 'postgres',
+    url: databaseUrl,
+    host: process.env.DB_HOST || 'ep-young-leaf-axv340na-pooler.c-4.us-east-2.aws.neon.tech',
     port: parseInt(process.env.DB_PORT, 10) || 5432,
-    name: process.env.DB_NAME || 'videoplatform',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgrespassword',
-    ssl: process.env.DB_SSL === 'true',
+    name: process.env.DB_NAME || 'neondb',
+    user: process.env.DB_USER || 'neondb_owner',
+    password: process.env.DB_PASSWORD || 'npg_FBwOPsI5L4fE',
+    ssl: true,
   },
   jwt: {
-    secret: process.env.JWT_SECRET,
-    refreshSecret: process.env.JWT_REFRESH_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    secret: jwtSecret,
+    refreshSecret: jwtRefreshSecret,
+    expiresIn: process.env.JWT_EXPIRES_IN || '8h',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 };
