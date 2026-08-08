@@ -104,7 +104,7 @@ class CandidateService {
           c.id,
           c.candidate_code,
           c.vendor_id,
-          v.vendor_code AS vendor_code,
+          v.vendor_code,
           v.company_name AS vendor_name,
           c.full_name,
           c.phone,

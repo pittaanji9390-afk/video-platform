@@ -251,7 +251,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 'email': c['email']?.toString() ?? 'candidate@example.com',
                 'phone': c['phone']?.toString() ?? 'N/A',
                 'vendor': c['vendor_name']?.toString() ?? c['company_name']?.toString() ?? 'Vendor',
-                'vendor_code': c['vendor_code']?.toString() ?? c['vendorCode']?.toString() ?? 'VEN-001',
+                'vendor_code': c['vendor_code']?.toString() ?? c['vendorCode']?.toString() ?? c['vendor_id']?.toString() ?? '',
                 'videos': num.tryParse(c['videos_count']?.toString() ?? '3')?.toInt() ?? 3,
                 'status': isActive ? 'Active' : 'Inactive',
               });
@@ -1575,8 +1575,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(c['name'] ?? 'Candidate Name', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
-                const SizedBox(height: 2),
-                Text('Vendor Code: ${c['vendor_code'] ?? c['vendorCode'] ?? 'VEN-001'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                if ((c['vendor_code'] ?? c['vendorCode'] ?? '').toString().isNotEmpty) ...[
+                  Text('Vendor Code: ${c['vendor_code'] ?? c['vendorCode']}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                ],
                 if (c['email'] != null && c['email'].toString().isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text('Email: ${c['email']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
