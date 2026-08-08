@@ -323,30 +323,36 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
           }
         } catch (_) {}
       }
-                    'time': '10 mins ago',
-                    'icon': Icons.person_add_rounded,
-                    'color': const Color(0xFF2563EB),
-                    'read': false,
-                  });
-                }
-                for (var qc in tempQC.take(2)) {
-                  _recentActivities.add({
-                    'title': 'QC Video ${qc['status']}',
-                    'subtitle': '${qc['candidateName']} - ${qc['title']}',
-                    'time': 'Just now',
-                    'icon': qc['status'] == 'Approved'
-                        ? Icons.check_circle_rounded
-                        : (qc['status'] == 'Rejected' ? Icons.cancel_rounded : Icons.pending_rounded),
-                    'color': qc['status'] == 'Approved'
-                        ? const Color(0xFF10B981)
-                        : (qc['status'] == 'Rejected' ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
-                    'read': false,
-                  });
-                }
-              });
-            }
+
+      // 6. Recent Activities Population
+      if (mounted) {
+        setState(() {
+          _recentActivities.clear();
+          for (var cand in _candidates.take(2)) {
+            _recentActivities.add({
+              'title': 'Candidate Registration',
+              'subtitle': '${cand['name']} registered',
+              'time': '10 mins ago',
+              'icon': Icons.person_add_rounded,
+              'color': const Color(0xFF2563EB),
+              'read': false,
+            });
           }
-        } catch (_) {}
+          for (var qc in _qcSubmissions.take(2)) {
+            _recentActivities.add({
+              'title': 'QC Video ${qc['status']}',
+              'subtitle': '${qc['candidateName']} - ${qc['title']}',
+              'time': 'Just now',
+              'icon': qc['status'] == 'Approved'
+                  ? Icons.check_circle_rounded
+                  : (qc['status'] == 'Rejected' ? Icons.cancel_rounded : Icons.pending_rounded),
+              'color': qc['status'] == 'Approved'
+                  ? const Color(0xFF10B981)
+                  : (qc['status'] == 'Rejected' ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
+              'read': false,
+            });
+          }
+        });
       }
 
       // 5. SharedPreferences Local Storage Uploads Integration
