@@ -43,8 +43,8 @@ class UploadService {
   }) async {
     // Get real candidate_id and vendor_id from session
     final session = await AuthService.restoreSession();
-    final realUserId    = candidateId ?? session?['id']   ?? '';
-    final realVendorId  = vendorId    ?? session?['id']   ?? '';
+    final realUserId    = candidateId ?? session?['id'] ?? session?['userId'] ?? '';
+    final realVendorId  = vendorId    ?? session?['vendorId'] ?? session?['vendor_id'] ?? '';
 
     if (kIsWeb) {
       // Web: POST JSON to /api/v1/videos to create a real DB record

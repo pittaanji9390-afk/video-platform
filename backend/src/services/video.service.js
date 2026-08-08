@@ -75,36 +75,41 @@ class VideoService {
       let validCandidateId = candidate_id;
       let validVendorId = null;
 
-      // 1. Resolve candidate's vendor_id strictly from candidates or users table
+      // 1. Resolve candidate's id (UUID) and vendor_id (UUID)
       if (validCandidateId) {
-        const candVendorRes = await db.query(
-          `SELECT vendor_id FROM candidates WHERE (id = $1 OR id::text = $1::text) AND vendor_id IS NOT NULL
+        const candRes = await db.query(
+          `SELECT c.id AS candidate_id, c.vendor_id
+           FROM candidates c WHERE (c.id = $1 OR c.id::text = $1::text OR LOWER(c.email) = LOWER($1)) AND c.deleted_at IS NULL
            UNION
-           SELECT vendor_id FROM users WHERE (id = $1 OR id::text = $1::text) AND vendor_id IS NOT NULL`,
+           SELECT u.id AS candidate_id, u.vendor_id
+           FROM users u WHERE (u.id = $1 OR u.id::text = $1::text OR LOWER(u.email) = LOWER($1)) AND u.deleted_at IS NULL
+           LIMIT 1`,
           [validCandidateId]
         ).catch(() => ({ rowCount: 0, rows: [] }));
 
-        if (candVendorRes.rowCount > 0 && candVendorRes.rows[0].vendor_id) {
-          const checkVen = await db.query('SELECT id FROM vendors WHERE id = $1 OR id::text = $1::text', [candVendorRes.rows[0].vendor_id]).catch(() => ({ rowCount: 0, rows: [] }));
-          if (checkVen.rowCount > 0) {
-            validVendorId = checkVen.rows[0].id;
-          }
+        if (candRes.rowCount > 0) {
+          if (candRes.rows[0].candidate_id) validCandidateId = candRes.rows[0].candidate_id;
+          if (candRes.rows[0].vendor_id) validVendorId = candRes.rows[0].vendor_id;
         }
       }
 
-      // 2. If vendor_id passed directly in request body, validate against vendors table
-      if (!validVendorId && vendor_id) {
-        const checkPassedVen = await db.query('SELECT id FROM vendors WHERE id = $1 OR id::text = $1::text OR LOWER(vendor_code) = LOWER($1::text)', [vendor_id]).catch(() => ({ rowCount: 0, rows: [] }));
+      // 2. If vendor_id passed directly or not resolved yet, validate against vendors table
+      if (vendor_id) {
+        const checkPassedVen = await db.query(
+          'SELECT id FROM vendors WHERE (id = $1 OR id::text = $1::text OR LOWER(vendor_code) = LOWER($1::text)) AND deleted_at IS NULL LIMIT 1',
+          [vendor_id]
+        ).catch(() => ({ rowCount: 0, rows: [] }));
         if (checkPassedVen.rowCount > 0) {
           validVendorId = checkPassedVen.rows[0].id;
         }
       }
 
-      // 3. STRICT ENFORCEMENT: Candidate MUST have a valid vendor relationship in vendors table
+      // 3. Fallback: If vendor_id still not resolved, assign first active vendor
       if (!validVendorId) {
-        const err = new Error('Candidate is not associated with a valid vendor in the system. Upload rejected.');
-        err.statusCode = 400;
-        throw err;
+        const anyVen = await db.query('SELECT id FROM vendors WHERE deleted_at IS NULL AND is_active = TRUE ORDER BY created_at ASC LIMIT 1').catch(() => ({ rowCount: 0, rows: [] }));
+        if (anyVen.rowCount > 0) {
+          validVendorId = anyVen.rows[0].id;
+        }
       }
 
       let videoRecord;
@@ -217,7 +222,7 @@ class VideoService {
       const params = [];
       if (candidate_id) {
         params.push(candidate_id);
-        const candCond = ` AND (v.candidate_id::text = $${params.length}::text OR v.candidate_id::text = NULLIF(regexp_replace($${params.length}::text, '\\D', '', 'g'), '') OR c.id::text = $${params.length}::text OR LOWER(c.email) = LOWER($${params.length}) OR v.candidate_id IN (SELECT id FROM candidates WHERE LOWER(email) = LOWER($${params.length}) UNION SELECT id FROM users WHERE LOWER(email) = LOWER($${params.length})))`;
+        const candCond = ` AND (v.candidate_id::text = $${params.length}::text OR c.id::text = $${params.length}::text OR LOWER(c.email) = LOWER($${params.length}) OR v.candidate_id IN (SELECT id FROM candidates WHERE id::text = $${params.length}::text OR LOWER(email) = LOWER($${params.length}) UNION SELECT id FROM users WHERE id::text = $${params.length}::text OR LOWER(email) = LOWER($${params.length})))`;
         countQuery += candCond;
         selectQuery += candCond;
       }
