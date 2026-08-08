@@ -267,19 +267,39 @@ class AuthService {
     // 3. Hash password with bcrypt
     const passwordHash = await bcrypt.hash(cleanPassword, 10);
 
-    // 4. Insert Candidate into candidates PostgreSQL table
+    // 4. Generate sequential candidate code (CAN-01, CAN-02, ...)
+    let candCode = 'CAN-01';
+    try {
+      const codeRes = await db.query(`SELECT candidate_code FROM candidates WHERE candidate_code IS NOT NULL AND candidate_code LIKE 'CAN-%'`);
+      let maxNum = 0;
+      for (const row of codeRes.rows) {
+        if (row.candidate_code) {
+          const match = row.candidate_code.match(/CAN-(\d+)/i);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+          }
+        }
+      }
+      const nextNum = maxNum + 1;
+      const padStr = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
+      candCode = `CAN-${padStr}`;
+    } catch (_) {}
+
+    // 5. Insert Candidate into candidates PostgreSQL table
     let candidateRow;
     try {
       const insertRes = await db.query(
-        `INSERT INTO candidates (vendor_id, full_name, email, phone, password_hash, is_active, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, TRUE, NOW(), NOW())
-         RETURNING id, vendor_id, full_name, email, phone, is_active, created_at`,
-        [vendorId, cleanFullName, cleanEmail, cleanPhone, passwordHash]
+        `INSERT INTO candidates (candidate_code, vendor_id, full_name, email, phone, password_hash, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW(), NOW())
+         RETURNING id, candidate_code, vendor_id, full_name, email, phone, is_active, created_at`,
+        [candCode, vendorId, cleanFullName, cleanEmail, cleanPhone, passwordHash]
       );
       candidateRow = insertRes.rows[0];
     } catch (e) {
       candidateRow = {
         id: `cand-${Date.now()}`,
+        candidate_code: candCode,
         vendor_id: vendorId,
         full_name: cleanFullName,
         email: cleanEmail,
@@ -288,7 +308,7 @@ class AuthService {
       };
     }
 
-    // 5. Generate JWT tokens
+    // 6. Generate JWT tokens
     const accessToken = jwt.sign(
       {
         id: candidateRow.id,
@@ -316,6 +336,7 @@ class AuthService {
       refreshToken,
       user: {
         id: candidateRow.id,
+        candidate_code: candidateRow.candidate_code || candCode,
         email: candidateRow.email,
         full_name: candidateRow.full_name,
         role: 'candidate',
@@ -340,13 +361,14 @@ class AuthService {
       // 2. Query candidates table for candidate specific details
       if (role === 'candidate' || (profile && profile.role === 'candidate')) {
         const candRes = await db.query(
-          'SELECT c.id, c.full_name, c.email, c.phone, c.vendor_id, v.vendor_code, v.company_name, c.is_active, c.created_at FROM candidates c LEFT JOIN vendors v ON c.vendor_id = v.id WHERE c.id = $1 OR LOWER(c.email) = LOWER($2)',
+          'SELECT c.id, c.candidate_code, c.full_name, c.email, c.phone, c.vendor_id, v.vendor_code, v.company_name, c.is_active, c.created_at FROM candidates c LEFT JOIN vendors v ON c.vendor_id = v.id WHERE c.id = $1 OR LOWER(c.email) = LOWER($2)',
           [userId || '00000000-0000-0000-0000-000000000002', email || '']
         );
         if (candRes.rows.length > 0) {
           const c = candRes.rows[0];
           profile = {
             id: c.id,
+            candidate_code: c.candidate_code || 'CAN-01',
             email: c.email || profile?.email || email,
             full_name: c.full_name || profile?.full_name || 'Candidate User',
             role: 'candidate',

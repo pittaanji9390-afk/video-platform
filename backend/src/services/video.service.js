@@ -391,7 +391,15 @@ class VideoService {
       const params = [];
       if (candidateId) {
         params.push(candidateId);
-        queryText += ` AND (candidate_id = $1 OR candidate_id::text = $1::text)`;
+        queryText += ` AND (
+          candidate_id = $1
+          OR candidate_id::text = $1::text
+          OR candidate_id IN (
+            SELECT id FROM candidates WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text)
+            UNION
+            SELECT id FROM users WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text)
+          )
+        )`;
       }
 
       const res = await db.query(queryText, params);

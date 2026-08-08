@@ -1721,6 +1721,10 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         bc.onMessage.listen((event) {
           if (mounted) _loadDashboardData();
         });
+        final eventSource = web.EventSourceStub('${ApiConstants.baseUrl}/api/v1/notifications/stream');
+        eventSource.onMessage.listen((event) {
+          if (mounted) _loadDashboardData();
+        });
       } catch (_) {}
     }
   }
@@ -1729,7 +1733,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
   Widget _buildQCApprovedTab() {
     final approvedItems = _qcSubmissions.where((item) {
       final s = (item['status'] ?? '').toString().toLowerCase().replaceAll('_', ' ').trim();
-      return s == 'approved' || s == 'qc approved' || s == 'final approved';
+      return s == 'approved' || s == 'qc approved' || s == 'final approved' || s.contains('qc approved') || s.contains('approved');
     }).toList();
 
     return Container(

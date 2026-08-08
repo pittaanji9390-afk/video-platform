@@ -5,6 +5,38 @@
 
 const db = require('../database/connection');
 
+async function generateNextCandidateCode() {
+  try {
+    const res = await db.query(`
+      SELECT candidate_code
+      FROM candidates
+      WHERE candidate_code IS NOT NULL AND candidate_code LIKE 'CAN-%'
+    `);
+
+    let maxNum = 0;
+    for (const row of res.rows) {
+      if (row.candidate_code) {
+        const match = row.candidate_code.match(/CAN-(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+    }
+
+    if (maxNum === 0) {
+      const countRes = await db.query(`SELECT COUNT(*) FROM candidates WHERE deleted_at IS NULL`).catch(() => ({ rows: [{ count: 0 }] }));
+      maxNum = parseInt(countRes.rows[0]?.count || 0, 10);
+    }
+
+    const nextNum = maxNum + 1;
+    const padStr = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
+    return `CAN-${padStr}`;
+  } catch (_) {
+    return `CAN-01`;
+  }
+}
+
 class CandidateService {
   async createCandidate({ vendor_id, full_name, phone, email }) {
     try {
@@ -30,19 +62,23 @@ class CandidateService {
         throw error;
       }
 
+      const candidateCode = await generateNextCandidateCode();
+
       const insertQuery = `
         INSERT INTO candidates (
+          candidate_code,
           vendor_id,
           full_name,
           phone,
           email,
           is_active
         )
-        VALUES ($1, $2, $3, $4, TRUE)
+        VALUES ($1, $2, $3, $4, $5, TRUE)
         RETURNING *
       `;
 
       const result = await db.query(insertQuery, [
+        candidateCode,
         vendor_id,
         full_name,
         phone,
@@ -66,6 +102,7 @@ class CandidateService {
       let selectQuery = `
         SELECT
           c.id,
+          c.candidate_code,
           c.vendor_id,
           v.vendor_code AS vendor_code,
           v.company_name AS vendor_name,

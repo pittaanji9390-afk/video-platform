@@ -9,13 +9,54 @@ const logger = require('../utils/logger');
 const bcrypt = require('bcryptjs');
 const notificationService = require('./notification.service');
 
+async function generateNextVendorCode(companyName = '') {
+  try {
+    let prefix = 'VEN';
+    if (companyName && companyName.trim()) {
+      const clean = companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (clean.length >= 3) {
+        prefix = clean.slice(0, 6);
+      } else if (clean.length > 0) {
+        prefix = clean;
+      }
+    }
+
+    const res = await db.query(
+      `SELECT vendor_code FROM vendors WHERE vendor_code LIKE $1 OR vendor_code LIKE 'VEN-%'`,
+      [`${prefix}-%`]
+    ).catch(() => ({ rows: [] }));
+
+    let maxNum = 0;
+    for (const row of res.rows) {
+      if (row.vendor_code) {
+        const match = row.vendor_code.match(/-(?:0*)(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+    }
+
+    if (maxNum === 0) {
+      const countRes = await db.query(`SELECT COUNT(*) FROM vendors WHERE deleted_at IS NULL`).catch(() => ({ rows: [{ count: 0 }] }));
+      maxNum = parseInt(countRes.rows[0]?.count || 0, 10);
+    }
+
+    const nextNum = maxNum + 1;
+    const padStr = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
+    return `${prefix}-${padStr}`;
+  } catch (_) {
+    return `VEN-01`;
+  }
+}
+
 class VendorService {
   /**
    * Create New Vendor with Password, Audit Logging, and Notifications
    */
   async createVendor({ company_name, contact_person, email, phone, password, address, created_by }) {
     try {
-      const vendorCode = `VEN-${Math.floor(1000 + Math.random() * 9000)}`;
+      const vendorCode = await generateNextVendorCode(company_name);
       const cleanEmail = (email || '').trim().toLowerCase();
       const cleanPassword = password && password.trim() ? password.trim() : 'vendor123';
       const passwordHash = await bcrypt.hash(cleanPassword, 10);
@@ -29,6 +70,7 @@ class VendorService {
           company_name = EXCLUDED.company_name,
           contact_person = EXCLUDED.contact_person,
           phone = EXCLUDED.phone,
+          vendor_code = EXCLUDED.vendor_code,
           is_active = TRUE,
           updated_at = NOW()
         RETURNING id, vendor_code, company_name, contact_person, email, phone, is_active, created_at, updated_at

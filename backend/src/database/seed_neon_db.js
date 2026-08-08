@@ -11,7 +11,8 @@ async function seedNeonDatabase() {
     const candidatePasswordHash = await bcrypt.hash('candidate123', 10);
     const qcPasswordHash = await bcrypt.hash('qcteam123', 10);
 
-    // Ensure password_hash, password, user_role, role, project_id, event_type, and type columns exist on all tables
+    // Ensure password_hash, password, user_role, role, project_id, event_type, type, and candidate_code columns exist on all tables
+    await db.query('ALTER TABLE candidates ADD COLUMN IF NOT EXISTS candidate_code VARCHAR(50);').catch(() => {});
     await db.query('ALTER TABLE qc_tickets ADD COLUMN IF NOT EXISTS project_id VARCHAR(100);').catch(() => {});
     await db.query('ALTER TABLE vendors ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);').catch(() => {});
     await db.query('ALTER TABLE vendors ADD COLUMN IF NOT EXISTS password VARCHAR(255);').catch(() => {});
@@ -53,13 +54,8 @@ async function seedNeonDatabase() {
       );
     `).catch(() => {});
 
-    // Clean old dummy credentials
-    console.log('🧹 Cleaning old dummy accounts from database...');
-    await db.query(`DELETE FROM users WHERE email NOT IN ('admin@gmail.com', 'vendor@gmail.com', 'candidate@gmail.com', 'qcteam@gmail.com');`).catch(() => {});
-    await db.query(`DELETE FROM admins WHERE email NOT IN ('admin@gmail.com');`).catch(() => {});
-    await db.query(`DELETE FROM vendors WHERE email NOT IN ('vendor@gmail.com');`).catch(() => {});
-    await db.query(`DELETE FROM candidates WHERE email NOT IN ('candidate@gmail.com');`).catch(() => {});
-    await db.query(`DELETE FROM reviewer_activity WHERE reviewer_email NOT IN ('qcteam@gmail.com');`).catch(() => {});
+    // Clean old dummy credentials safely without deleting existing real user data
+    console.log('🧹 Ensuring default system accounts exist...');
 
     // 1. Seed Admins Table (admin@gmail.com / admin123)
     console.log('1. Seeding Admin (admin@gmail.com / admin123)...');
@@ -74,10 +70,30 @@ async function seedNeonDatabase() {
     console.log('2. Seeding Vendor (vendor@gmail.com / vendor123)...');
     await db.query(`
       INSERT INTO vendors (id, vendor_code, company_name, contact_person, email, phone, address, password_hash, is_active)
-      VALUES ('10000000-0000-4000-8000-000000000001', 'VEN-001', 'Acme Vendor Solutions', 'Vendor Operations', 'vendor@gmail.com', '+91 98765 00001', 'Bangalore, India', $1, TRUE)
+      VALUES ('10000000-0000-4000-8000-000000000001', 'VEN-01', 'Acme Vendor Solutions', 'Vendor Operations', 'vendor@gmail.com', '+91 98765 00001', 'Bangalore, India', $1, TRUE)
       ON CONFLICT (email) DO UPDATE 
       SET password_hash = EXCLUDED.password_hash, is_active = TRUE;
     `, [vendorPasswordHash]);
+
+    // Backfill vendor codes sequentially ONLY for vendors missing a vendor_code
+    const missingVenRes = await db.query(`
+      SELECT id, company_name FROM vendors WHERE vendor_code IS NULL OR vendor_code = '' ORDER BY created_at ASC, id ASC
+    `).catch(() => ({ rows: [] }));
+
+    if (missingVenRes.rows && missingVenRes.rows.length > 0) {
+      let currentSeq = 1;
+      for (const venRow of missingVenRes.rows) {
+        let pfx = 'VEN';
+        if (venRow.company_name) {
+          const cleanName = venRow.company_name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (cleanName.length >= 3) pfx = cleanName.slice(0, 6);
+        }
+        const padStr = currentSeq < 10 ? `0${currentSeq}` : `${currentSeq}`;
+        const autoCode = `${pfx}-${padStr}`;
+        await db.query(`UPDATE vendors SET vendor_code = $1 WHERE id = $2`, [autoCode, venRow.id]).catch(() => {});
+        currentSeq++;
+      }
+    }
 
     await db.query(`
       INSERT INTO users (id, email, password_hash, full_name, role, is_active)
@@ -88,20 +104,35 @@ async function seedNeonDatabase() {
 
     // 3. Seed Candidates Table (candidate@gmail.com / candidate123)
     console.log('3. Seeding Candidate (candidate@gmail.com / candidate123)...');
-    await db.query(`DELETE FROM candidates WHERE email = 'candidate@gmail.com';`).catch(() => {});
     await db.query(`
-      INSERT INTO candidates (id, vendor_id, full_name, email, phone, password_hash, is_active)
-      VALUES ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Vasavi Candidate', 'candidate@gmail.com', '+91 98765 43210', $1, TRUE)
-      ON CONFLICT (id) DO UPDATE 
-      SET password_hash = EXCLUDED.password_hash, is_active = TRUE;
+      INSERT INTO candidates (id, candidate_code, vendor_id, full_name, email, phone, password_hash, is_active)
+      VALUES ('20000000-0000-4000-8000-000000000001', 'CAN-01', '10000000-0000-4000-8000-000000000001', 'Vasavi Candidate', 'candidate@gmail.com', '+91 98765 43210', $1, TRUE)
+      ON CONFLICT (email) DO UPDATE 
+      SET candidate_code = COALESCE(candidates.candidate_code, 'CAN-01'), password_hash = EXCLUDED.password_hash, is_active = TRUE;
     `, [candidatePasswordHash]);
+
+    // Backfill missing candidate codes sequentially (CAN-01, CAN-02, ...)
+    const missingCandRes = await db.query(`
+      SELECT id FROM candidates WHERE candidate_code IS NULL OR candidate_code = '' ORDER BY created_at ASC, id ASC
+    `).catch(() => ({ rows: [] }));
+
+    if (missingCandRes.rows && missingCandRes.rows.length > 0) {
+      let currentSeq = 1;
+      for (const candRow of missingCandRes.rows) {
+        const padStr = currentSeq < 10 ? `0${currentSeq}` : `${currentSeq}`;
+        const autoCode = `CAN-${padStr}`;
+        await db.query(`UPDATE candidates SET candidate_code = $1 WHERE id = $2`, [autoCode, candRow.id]).catch(() => {});
+        currentSeq++;
+      }
+    }
 
     // 4. Seed QC Team Table (qcteam@gmail.com / qcteam123 & qc@gmail.com / qc123456)
     console.log('4. Seeding QC Team (qcteam@gmail.com / qcteam123)...');
-    await db.query(`DELETE FROM reviewer_activity WHERE reviewer_email IN ('qcteam@gmail.com', 'qc@gmail.com');`).catch(() => {});
     await db.query(`
       INSERT INTO reviewer_activity (reviewer_id, reviewer_name, reviewer_email, password_hash, is_active, is_available)
-      VALUES ('30000000-0000-4000-8000-000000000001', 'QC Team Specialist', 'qcteam@gmail.com', $1, TRUE, TRUE);
+      VALUES ('30000000-0000-4000-8000-000000000001', 'QC Team Specialist', 'qcteam@gmail.com', $1, TRUE, TRUE)
+      ON CONFLICT (reviewer_email) DO UPDATE
+      SET is_active = TRUE, is_available = TRUE;
     `, [qcPasswordHash]);
 
     await db.query(`

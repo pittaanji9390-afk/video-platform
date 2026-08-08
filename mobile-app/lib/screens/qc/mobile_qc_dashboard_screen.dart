@@ -135,15 +135,6 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
               final assignedTo = (t['assigned_reviewer_name'] ?? t['assignedTo'] ?? t['assigned_to'] ?? '').toString();
               final assignedReviewerId = (t['assigned_reviewer_id'] ?? t['assigned_reviewer'] ?? '').toString();
 
-              final bool isAssignedToMe = (assignedReviewerId == reviewerId) ||
-                  (reviewerId.isNotEmpty && assignedReviewerId.isEmpty) ||
-                  (userEmail.isNotEmpty && assignedTo.toLowerCase().contains(userEmail)) ||
-                  (userName.isNotEmpty && assignedTo.toLowerCase().contains(userName));
-
-              if (assignedReviewerId.isNotEmpty && !isAssignedToMe) {
-                continue; // Skip tickets assigned to another reviewer
-              }
-
               final map = Map<String, dynamic>.from(t);
               map['assigned_reviewer_id'] = assignedReviewerId;
               map['assigned_reviewer_name'] = assignedTo;

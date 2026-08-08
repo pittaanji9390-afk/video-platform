@@ -138,26 +138,25 @@ class QCTicketService {
       }
 
       if (!ticketIds || ticketIds.length === 0) return [];
-      // 1. Fetch all active & available QC reviewers from reviewer_activity and users tables
+      // 1. Fetch all active QC reviewers from users table first, then reviewer_activity
       const reviewersRes = await db.query(`
+        SELECT id AS reviewer_id, full_name AS reviewer_name, email AS reviewer_email
+        FROM users
+        WHERE role IN ('qc', 'qc_team', 'qc_reviewer') AND is_active = TRUE
+        UNION
         SELECT reviewer_id, reviewer_name, reviewer_email
         FROM reviewer_activity
         WHERE is_active = TRUE AND is_available = TRUE
-        UNION
-        SELECT id AS reviewer_id, full_name AS reviewer_name, email AS reviewer_email
-        FROM users
-        WHERE role IN ('qc', 'qc_team') AND is_active = TRUE
         ORDER BY reviewer_id ASC
       `);
 
       let reviewers = reviewersRes.rows;
 
-      // Fallback reviewers if database is empty
+      // Fallback reviewers if database is completely empty
       if (!reviewers || reviewers.length === 0) {
         reviewers = [
-          { reviewer_id: 'a0000000-0000-0000-0000-000000000001', reviewer_name: 'QC Lead Specialist', reviewer_email: 'qc@videoplatform.com' },
-          { reviewer_id: 'a0000000-0000-0000-0000-000000000002', reviewer_name: 'QC Reviewer Specialist', reviewer_email: 'qc.reviewer@videoplatform.com' },
-          { reviewer_id: 'a0000000-0000-0000-0000-000000000003', reviewer_name: 'Priya Sharma (QC Specialist)', reviewer_email: 'priya.qc@videoplatform.com' },
+          { reviewer_id: '30000000-0000-4000-8000-000000000001', reviewer_name: 'QC Team Specialist', reviewer_email: 'qcteam@gmail.com' },
+          { reviewer_id: '30000000-0000-4000-8000-000000000002', reviewer_name: 'QC Evaluator', reviewer_email: 'qc@gmail.com' },
         ];
       }
 
