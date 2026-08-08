@@ -251,7 +251,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 'email': c['email']?.toString() ?? 'candidate@example.com',
                 'phone': c['phone']?.toString() ?? 'N/A',
                 'vendor': c['vendor_name']?.toString() ?? c['company_name']?.toString() ?? 'Vendor',
-                'vendor_code': c['vendor_code']?.toString() ?? c['vendorCode']?.toString() ?? c['vendor_id']?.toString() ?? '',
+                'vendor_code': c['vendor_code']?.toString() ?? c['vendorCode']?.toString() ?? '',
                 'videos': num.tryParse(c['videos_count']?.toString() ?? '3')?.toInt() ?? 3,
                 'status': isActive ? 'Active' : 'Inactive',
               });

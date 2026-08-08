@@ -245,15 +245,9 @@ class AuthService {
       if (vendorRes.rows.length > 0) {
         vendorId = vendorRes.rows[0].id;
       } else {
-        // Fallback check if any active vendor exists
-        const fallbackRes = await db.query(`SELECT id FROM vendors WHERE deleted_at IS NULL AND is_active = TRUE ORDER BY created_at ASC LIMIT 1`).catch(() => ({ rows: [] }));
-        if (fallbackRes.rows.length > 0) {
-          vendorId = fallbackRes.rows[0].id;
-        } else {
-          const error = new Error('Invalid vendor code. Please check with your vendor and try again.');
-          error.statusCode = 400;
-          throw error;
-        }
+        const error = new Error('Invalid vendor code. Please check with your vendor and try again.');
+        error.statusCode = 400;
+        throw error;
       }
     } catch (e) {
       if (e.statusCode) throw e;
