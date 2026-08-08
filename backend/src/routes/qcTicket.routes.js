@@ -14,6 +14,9 @@ router.use(authenticateJWT);
 // Get QC Dashboard Live Database Stats (admin, qc_team)
 router.get('/dashboard-stats', requireRole('admin', 'qc_team'), qcTicketController.getDashboardStats);
 
+// Get active registered QC reviewers (admin, qc_team)
+router.get('/active-reviewers', requireRole('admin', 'qc_team'), qcTicketController.getActiveReviewers);
+
 // Create / Assign Ticket (admin only)
 router.post('/tickets', requireRole('admin'), qcTicketController.createTicket);
 router.post('/tickets/assign', requireRole('admin', 'qc_team'), qcTicketController.assignTicket);

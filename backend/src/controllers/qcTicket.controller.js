@@ -119,6 +119,18 @@ class QCTicketController {
     }
   }
 
+  async getActiveReviewers(req, res, next) {
+    try {
+      const reviewers = await qcTicketService.getActiveQCReviewers();
+      return res.status(200).json({
+        status: 'success',
+        data: reviewers,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getReviewerActivity(req, res, next) {
     try {
       const reviewers = await qcTicketService.getAllReviewersActivity();

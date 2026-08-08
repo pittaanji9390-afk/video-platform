@@ -22,12 +22,15 @@ class AdminService {
         db.query(`
           SELECT 
             COUNT(*) AS total_uploaded,
-            COUNT(CASE WHEN LOWER(status) LIKE '%pending%' OR LOWER(status) = 'assigned_qc' THEN 1 END) AS pending_qc,
-            COUNT(CASE WHEN LOWER(status) = 'qc_approved' OR LOWER(status) = 'pending_admin_review' THEN 1 END) AS qc_approved,
-            COUNT(CASE WHEN LOWER(status) = 'approved' THEN 1 END) AS approved,
-            COUNT(CASE WHEN LOWER(status) LIKE '%reject%' THEN 1 END) AS rejected
-          FROM videos WHERE deleted_at IS NULL
-        `).catch(() => ({ rows: [{ total_uploaded: '0', pending_qc: '0', qc_approved: '0', approved: '0', rejected: '0' }] })),
+            COUNT(CASE WHEN (LOWER(v.status) IN ('pending_qc', 'pending', 'unassigned') OR v.status IS NULL) AND (t.assigned_reviewer_id IS NULL OR t.assigned_reviewer_id::text = '') THEN 1 END) AS pending_qc,
+            COUNT(CASE WHEN LOWER(v.status) = 'assigned_qc' OR (t.assigned_reviewer_id IS NOT NULL AND LOWER(v.status) NOT IN ('qc_approved', 'approved', 'rejected', 'qc_rejected')) THEN 1 END) AS assigned_qc,
+            COUNT(CASE WHEN LOWER(v.status) IN ('qc_approved', 'pending_admin_review') THEN 1 END) AS qc_approved,
+            COUNT(CASE WHEN LOWER(v.status) IN ('approved', 'final_approved') THEN 1 END) AS approved,
+            COUNT(CASE WHEN LOWER(v.status) LIKE '%reject%' THEN 1 END) AS rejected
+          FROM videos v
+          LEFT JOIN qc_tickets t ON v.id = t.video_id
+          WHERE v.deleted_at IS NULL
+        `).catch(() => ({ rows: [{ total_uploaded: '0', pending_qc: '0', assigned_qc: '0', qc_approved: '0', approved: '0', rejected: '0' }] })),
       ]);
 
       const v = videosRes.rows[0] || {};

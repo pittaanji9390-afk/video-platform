@@ -201,9 +201,11 @@ class VideoService {
         SELECT v.id, v.candidate_id, c.full_name AS candidate_name, v.vendor_id, ven.company_name AS vendor_name, ven.vendor_code,
                v.title, v.description, v.s3_url, v.file_name, v.local_path, v.file_size, v.duration,
                v.environment_tag, v.rejection_reason, v.latitude, v.longitude, v.device_id, v.recording_date, v.status,
+               t.assigned_reviewer_id, t.assigned_reviewer_name,
                qr.audio_score, qr.lighting_score, qr.framing_score, qr.env_match_score, qr.qc_comments, qr.admin_comments,
                v.created_at, v.updated_at
         FROM videos v
+        LEFT JOIN qc_tickets t ON v.id = t.video_id
         LEFT JOIN candidates c ON v.candidate_id = c.id
         LEFT JOIN vendors ven ON v.vendor_id = ven.id
         LEFT JOIN (

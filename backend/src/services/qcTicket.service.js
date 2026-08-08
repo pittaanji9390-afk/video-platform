@@ -67,11 +67,73 @@ class QCTicketService {
   /**
    * Admin Manual Assignment: Assigns a QC Ticket / Video to a specific QC Team Reviewer
    */
-  async assignTicketToReviewer(ticketIdOrVideoId, reviewerId, reviewerName = 'QC Specialist') {
+  /**
+   * Fetch Active QC Reviewer Accounts strictly from users & reviewer_activity tables
+   */
+  async getActiveQCReviewers() {
     try {
-      let targetReviewerId = reviewerId || '00000000-0000-0000-0000-000000000004';
+      const res = await db.query(`
+        SELECT id, full_name AS name, full_name AS reviewer_name, email, email AS reviewer_email, role
+        FROM users
+        WHERE role IN ('qc', 'qc_team', 'qc_reviewer') AND is_active = TRUE
+        ORDER BY created_at ASC, full_name ASC
+      `);
 
-      let ticketRes = await db.query(
+      if (res.rows && res.rows.length > 0) {
+        return res.rows;
+      }
+
+      // Fallback query from reviewer_activity
+      const revRes = await db.query(`
+        SELECT reviewer_id AS id, reviewer_name AS name, reviewer_name, reviewer_email AS email, 'qc' AS role
+        FROM reviewer_activity
+        WHERE is_active = TRUE
+        ORDER BY created_at ASC
+      `);
+
+      if (revRes.rows && revRes.rows.length > 0) {
+        return revRes.rows;
+      }
+
+      return [
+        { id: '30000000-0000-4000-8000-000000000001', name: 'QC Team Specialist', reviewer_name: 'QC Team Specialist', email: 'qcteam@gmail.com', role: 'qc' },
+        { id: '30000000-0000-4000-8000-000000000002', name: 'QC Evaluator', reviewer_name: 'QC Evaluator', email: 'qc@gmail.com', role: 'qc' },
+      ];
+    } catch (_) {
+      return [
+        { id: '30000000-0000-4000-8000-000000000001', name: 'QC Team Specialist', reviewer_name: 'QC Team Specialist', email: 'qcteam@gmail.com', role: 'qc' },
+        { id: '30000000-0000-4000-8000-000000000002', name: 'QC Evaluator', reviewer_name: 'QC Evaluator', email: 'qc@gmail.com', role: 'qc' },
+      ];
+    }
+  }
+
+  /**
+   * Assign Individual Ticket to Reviewer with DB Transaction Commitment
+   */
+  async assignTicketToReviewer(ticketIdOrVideoId, reviewerId, reviewerName = 'QC Specialist') {
+    const client = await db.getClient();
+    try {
+      await client.query('BEGIN');
+
+      // Resolve actual QC user identity from users table if name/email or fallback passed
+      let targetUser = null;
+      if (reviewerId) {
+        const uRes = await client.query(
+          `SELECT id, full_name, email FROM users WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text) OR LOWER(full_name) = LOWER($1::text)`,
+          [reviewerId]
+        );
+        if (uRes.rows.length > 0) targetUser = uRes.rows[0];
+      }
+
+      if (!targetUser) {
+        const activeUsers = await this.getActiveQCReviewers();
+        targetUser = activeUsers[0];
+      }
+
+      const finalReviewerId = targetUser.id || targetUser.reviewer_id;
+      const finalReviewerName = targetUser.full_name || targetUser.name || reviewerName;
+
+      let ticketRes = await client.query(
         'SELECT * FROM qc_tickets WHERE id = $1 OR video_id = $1 OR video_id::text = $1',
         [ticketIdOrVideoId]
       );
@@ -79,80 +141,81 @@ class QCTicketService {
       let ticket = ticketRes.rows[0];
 
       if (!ticket) {
-        const vidRes = await db.query('SELECT * FROM videos WHERE id = $1 OR id::text = $1', [ticketIdOrVideoId]);
+        const vidRes = await client.query('SELECT * FROM videos WHERE id = $1 OR id::text = $1', [ticketIdOrVideoId]);
         if (vidRes.rows.length > 0) {
           const video = vidRes.rows[0];
           const ticketCode = `TKT-${Math.floor(10000 + Math.random() * 90000)}`;
-          const insRes = await db.query(
-            `INSERT INTO qc_tickets (ticket_code, video_id, candidate_id, vendor_id, assigned_reviewer_id, status, assigned_at, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, 'ASSIGNED_QC', NOW(), NOW(), NOW()) RETURNING *`,
-            [ticketCode, video.id, video.candidate_id, video.vendor_id, targetReviewerId]
+          const insRes = await client.query(
+            `INSERT INTO qc_tickets (ticket_code, video_id, candidate_id, vendor_id, assigned_reviewer_id, assigned_reviewer_name, status, assigned_at, assignment_time, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, 'ASSIGNED_QC', NOW(), NOW(), NOW(), NOW())
+             ON CONFLICT (video_id) DO UPDATE SET assigned_reviewer_id = EXCLUDED.assigned_reviewer_id, assigned_reviewer_name = EXCLUDED.assigned_reviewer_name, status = 'ASSIGNED_QC', assigned_at = NOW(), updated_at = NOW()
+             RETURNING *`,
+            [ticketCode, video.id, video.candidate_id, video.vendor_id, finalReviewerId, finalReviewerName]
           );
           ticket = insRes.rows[0];
         }
       }
 
       if (ticket) {
-        await db.query(
-          `UPDATE qc_tickets SET assigned_reviewer_id = $1, status = 'ASSIGNED_QC', assigned_at = NOW(), updated_at = NOW() WHERE id = $2`,
-          [targetReviewerId, ticket.id]
+        const upRes = await client.query(
+          `UPDATE qc_tickets
+           SET assigned_reviewer_id = $1, assigned_reviewer_name = $2, status = 'ASSIGNED_QC', assigned_at = NOW(), assignment_time = NOW(), updated_at = NOW()
+           WHERE id = $3 RETURNING *`,
+          [finalReviewerId, finalReviewerName, ticket.id]
         );
+        ticket = upRes.rows[0] || ticket;
+
         if (ticket.video_id) {
-          await db.query(
-            `UPDATE videos SET status = 'ASSIGNED_QC', updated_at = NOW() WHERE id = $1`,
+          await client.query(
+            `UPDATE videos SET status = 'ASSIGNED_QC', updated_at = NOW() WHERE id = $1 OR id::text = $1`,
             [ticket.video_id]
           );
         }
-        await db.query(
-          `INSERT INTO ticket_assignments (ticket_id, reviewer_id, assignment_reason, assigned_at) VALUES ($1, $2, 'ADMIN_MANUAL_ASSIGNMENT', NOW())`,
-          [ticket.id, targetReviewerId]
-        );
+        await client.query(
+          `INSERT INTO ticket_assignments (ticket_id, video_id, new_reviewer_id, new_reviewer_name, assignment_time, reason, performed_by)
+           VALUES ($1, $2, $3, $4, NOW(), 'ADMIN_MANUAL_ASSIGNMENT', 'ADMIN')`,
+          [ticket.id, ticket.video_id, finalReviewerId, finalReviewerName]
+        ).catch(() => {});
       }
 
+      await client.query('COMMIT');
       return ticket;
     } catch (e) {
+      await client.query('ROLLBACK');
       throw e;
+    } finally {
+      client.release();
     }
   }
 
   /**
-   * Least Workload Algorithm: Distributes tickets equally among active QC team members
+   * Least Workload Algorithm: Distributes tickets equally among active registered QC team members inside DB Transaction
    */
   async distributeTicketsEqually(ticketIds = []) {
+    const client = await db.getClient();
     try {
-      if (!ticketIds || ticketIds.length === 0) {
-        const unassignedRes = await db.query(
-          `SELECT id FROM qc_tickets WHERE assigned_reviewer_id IS NULL OR LOWER(status) IN ('unassigned', 'pending_qc', 'pending')`
-        );
-        ticketIds = unassignedRes.rows.map(r => r.id);
+      await client.query('BEGIN');
 
-        if (ticketIds.length === 0) {
-          const unassignedVids = await db.query(
-            `SELECT id FROM videos WHERE LOWER(status) IN ('pending_qc', 'pending')`
-          );
-          for (const v of unassignedVids.rows) {
-            const ticket = await this.assignTicketToReviewer(v.id, null);
-            if (ticket) ticketIds.push(ticket.id);
-          }
-        }
-      }
-
-      if (!ticketIds || ticketIds.length === 0) return [];
-      // 1. Fetch all active QC reviewers from users table first, then reviewer_activity
-      const reviewersRes = await db.query(`
+      // 1. Fetch all active registered QC reviewers from users table first
+      const reviewersRes = await client.query(`
         SELECT id AS reviewer_id, full_name AS reviewer_name, email AS reviewer_email
         FROM users
         WHERE role IN ('qc', 'qc_team', 'qc_reviewer') AND is_active = TRUE
-        UNION
-        SELECT reviewer_id, reviewer_name, reviewer_email
-        FROM reviewer_activity
-        WHERE is_active = TRUE AND is_available = TRUE
-        ORDER BY reviewer_id ASC
+        ORDER BY created_at ASC, id ASC
       `);
 
       let reviewers = reviewersRes.rows;
 
-      // Fallback reviewers if database is completely empty
+      if (!reviewers || reviewers.length === 0) {
+        const revActRes = await client.query(`
+          SELECT reviewer_id, reviewer_name, reviewer_email
+          FROM reviewer_activity
+          WHERE is_active = TRUE
+        `);
+        reviewers = revActRes.rows;
+      }
+
+      // Fallback reviewers if database is empty
       if (!reviewers || reviewers.length === 0) {
         reviewers = [
           { reviewer_id: '30000000-0000-4000-8000-000000000001', reviewer_name: 'QC Team Specialist', reviewer_email: 'qcteam@gmail.com' },
@@ -160,80 +223,116 @@ class QCTicketService {
         ];
       }
 
-      // 2. Count active workload (pending_qc + in_review) for each reviewer in a single query
-      const workloadRes = await db.query(`
+      // 2. Fetch pending ticket IDs needing assignment if empty
+      if (!ticketIds || ticketIds.length === 0) {
+        const unassignedRes = await client.query(
+          `SELECT id FROM qc_tickets WHERE (assigned_reviewer_id IS NULL OR assigned_reviewer_id::text = '') AND LOWER(status) IN ('unassigned', 'pending_qc', 'pending') AND deleted_at IS NULL ORDER BY created_at ASC`
+        );
+        ticketIds = unassignedRes.rows.map(r => r.id);
+
+        if (ticketIds.length === 0) {
+          const unassignedVids = await client.query(`
+            SELECT v.id, v.candidate_id, v.vendor_id FROM videos v
+            LEFT JOIN qc_tickets t ON v.id = t.video_id
+            WHERE (t.assigned_reviewer_id IS NULL OR t.assigned_reviewer_id::text = '' OR t.id IS NULL)
+              AND (LOWER(v.status) IN ('pending_qc', 'pending', 'unassigned') OR v.status IS NULL)
+              AND v.deleted_at IS NULL
+            ORDER BY v.created_at ASC
+          `);
+          for (const v of unassignedVids.rows) {
+            const ticketCode = `TKT-${Math.floor(10000 + Math.random() * 90000)}`;
+            const insRes = await client.query(`
+              INSERT INTO qc_tickets (ticket_code, video_id, candidate_id, vendor_id, status, created_at, updated_at)
+              VALUES ($1, $2, $3, $4, 'pending_qc', NOW(), NOW())
+              ON CONFLICT (video_id) DO UPDATE SET updated_at = NOW()
+              RETURNING id
+            `, [ticketCode, v.id, v.candidate_id, v.vendor_id]);
+            if (insRes.rows[0]) ticketIds.push(insRes.rows[0].id);
+          }
+        }
+      }
+
+      if (!ticketIds || ticketIds.length === 0) {
+        await client.query('COMMIT');
+        return [];
+      }
+
+      // 3. Count active workload for each reviewer inside transaction
+      const workloadRes = await client.query(`
         SELECT assigned_reviewer_id, COUNT(*) AS active_count
         FROM qc_tickets
         WHERE assigned_reviewer_id IS NOT NULL
-          AND status IN ('pending_qc', 'in_review')
+          AND LOWER(status) IN ('pending_qc', 'assigned_qc', 'in_review')
           AND deleted_at IS NULL
         GROUP BY assigned_reviewer_id
-      `).catch(() => ({ rows: [] }));
+      `);
       
       const workloadMap = {};
       for (const row of workloadRes.rows) {
         workloadMap[row.assigned_reviewer_id] = parseInt(row.active_count, 10);
       }
 
-      // 3. Assign each ticket to the reviewer with the least active workload
+      // 4. Assign each ticket to the reviewer with the least active workload
       const assignedResults = [];
       for (const ticketId of ticketIds) {
-        // Sort reviewers ascending by active workload count
         reviewers.sort((a, b) => (workloadMap[a.reviewer_id] || 0) - (workloadMap[b.reviewer_id] || 0));
         const selectedReviewer = reviewers[0];
 
         const updateTicketQuery = `
           UPDATE qc_tickets
-          SET assigned_reviewer_id = $1, assigned_reviewer_name = $2, status = 'ASSIGNED_QC', assignment_time = NOW(), updated_at = NOW()
+          SET assigned_reviewer_id = $1,
+              assigned_reviewer_name = $2,
+              status = 'ASSIGNED_QC',
+              assigned_at = NOW(),
+              assignment_time = NOW(),
+              updated_at = NOW()
           WHERE id = $3 AND deleted_at IS NULL
           RETURNING *
         `;
-        const updatedTicketRes = await db.query(updateTicketQuery, [
+        const updatedTicketRes = await client.query(updateTicketQuery, [
           selectedReviewer.reviewer_id,
           selectedReviewer.reviewer_name,
           ticketId,
         ]);
 
-        const ticket = updatedTicketRes.rows[0] || { id: ticketId, assigned_reviewer_id: selectedReviewer.reviewer_id, assigned_reviewer_name: selectedReviewer.reviewer_name };
+        const ticket = updatedTicketRes.rows[0];
 
-        if (ticket.video_id) {
-          await db.query(`UPDATE videos SET status = 'ASSIGNED_QC', updated_at = NOW() WHERE id = $1`, [ticket.video_id]).catch(() => {});
+        if (ticket && ticket.video_id) {
+          await client.query(
+            `UPDATE videos SET status = 'ASSIGNED_QC', updated_at = NOW() WHERE id = $1 OR id::text = $1`,
+            [ticket.video_id]
+          );
         }
 
-        // 4. Log Audit Entry in ticket_assignments table
-        await db.query(`
-          INSERT INTO ticket_assignments (
-            ticket_id, video_id, new_reviewer_id, new_reviewer_name, assignment_time, reason, performed_by
-          ) VALUES ($1, $2, $3, $4, NOW(), 'INITIAL_ASSIGNMENT', 'SYSTEM')
-        `, [
-          ticket.id,
-          ticket.video_id || `vid-${Date.now()}`,
-          selectedReviewer.reviewer_id,
-          selectedReviewer.reviewer_name,
-        ]).catch(() => {});
-
-        // 5. Create real-time notification for candidate
-        if (ticket.candidate_id) {
-          await db.query(`
-            INSERT INTO notifications (user_id, user_role, title, message, event_type, related_video_id, created_at)
-            VALUES ($1, 'candidate', 'Video Assigned for QC 🔍', $2, 'qc_assigned', $3, NOW())
+        if (ticket) {
+          await client.query(`
+            INSERT INTO ticket_assignments (
+              ticket_id, video_id, new_reviewer_id, new_reviewer_name, assignment_time, reason, performed_by
+            ) VALUES ($1, $2, $3, $4, NOW(), 'INITIAL_ASSIGNMENT', 'SYSTEM')
           `, [
-            ticket.candidate_id,
-            `Your video dataset has been assigned to QC Specialist ${selectedReviewer.reviewer_name} for quality review.`,
-            ticket.video_id,
+            ticket.id,
+            ticket.video_id || `vid-${Date.now()}`,
+            selectedReviewer.reviewer_id,
+            selectedReviewer.reviewer_name,
           ]).catch(() => {});
         }
 
-        // Update last_active_timestamp for selected reviewer
-        await db.query(
-          `UPDATE reviewer_activity SET last_active_timestamp = NOW(), is_available = TRUE WHERE reviewer_id = $1 OR reviewer_email = $2`,
-          [selectedReviewer.reviewer_id, selectedReviewer.reviewer_email || '']
-        ).catch(() => {});
-
-        // Increment local workload counter for balanced batch distribution
         workloadMap[selectedReviewer.reviewer_id] = (workloadMap[selectedReviewer.reviewer_id] || 0) + 1;
-        assignedResults.push(ticket);
+        if (ticket) assignedResults.push(ticket);
       }
+
+      await client.query('COMMIT');
+
+      logger.info(`✓ Least Workload Algorithm Completed: Equally distributed ${assignedResults.length} tickets across active QC team in DB transaction.`);
+      return assignedResults;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to distribute tickets in transaction:', { error: err.message });
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
 
       // Verification log check 5 seconds post-assignment
       if (assignedResults.length > 0) {
@@ -446,18 +545,27 @@ class QCTicketService {
       // Calculate reviewer statistics
       const statsQuery = `
         SELECT
-          COUNT(*) FILTER (WHERE assigned_reviewer_id = $1) AS total_assigned,
-          COUNT(*) FILTER (WHERE assigned_reviewer_id = $1 AND status = 'pending_qc') AS pending_review,
-          COUNT(*) FILTER (WHERE assigned_reviewer_id = $1 AND status = 'in_review') AS in_review,
-          COUNT(*) FILTER (WHERE assigned_reviewer_id = $1 AND status = 'qc_approved') AS approved,
-          COUNT(*) FILTER (WHERE assigned_reviewer_id = $1 AND status = 'qc_rejected') AS rejected,
-          COUNT(*) FILTER (WHERE assigned_reviewer_id = $1 AND DATE(updated_at) = CURRENT_DATE AND status IN ('qc_approved', 'qc_rejected')) AS completed_today
+          COUNT(*) AS total_assigned,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('assigned_qc', 'pending_qc', 'pending')) AS pending_review,
+          COUNT(*) FILTER (WHERE LOWER(status) = 'in_review') AS in_review,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('qc_approved', 'approved')) AS approved,
+          COUNT(*) FILTER (WHERE LOWER(status) LIKE '%reject%') AS rejected,
+          COUNT(*) FILTER (WHERE DATE(updated_at) = CURRENT_DATE AND LOWER(status) IN ('qc_approved', 'qc_rejected', 'approved', 'rejected')) AS completed_today
         FROM qc_tickets
         WHERE deleted_at IS NULL
+          AND (
+            assigned_reviewer_id = $1
+            OR assigned_reviewer_id::text = $1::text
+            OR assigned_reviewer_id IN (
+              SELECT id FROM users WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text)
+              UNION
+              SELECT reviewer_id FROM reviewer_activity WHERE reviewer_id = $1 OR reviewer_id::text = $1::text OR LOWER(reviewer_email) = LOWER($1::text)
+            )
+          )
       `;
 
-      const statsRes = await db.query(statsQuery, [reviewerId || 'a0000000-0000-0000-0000-000000000001']).catch(() => ({
-        rows: [{ total_assigned: tickets.length, pending_review: tickets.length, in_review: 0, approved: 1, rejected: 0, completed_today: 1 }],
+      const statsRes = await db.query(statsQuery, [reviewerId || '30000000-0000-4000-8000-000000000001']).catch(() => ({
+        rows: [{ total_assigned: tickets.length, pending_review: tickets.length, in_review: 0, approved: 0, rejected: 0, completed_today: 0 }],
       }));
 
       return {

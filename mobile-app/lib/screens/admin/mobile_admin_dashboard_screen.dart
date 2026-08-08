@@ -169,6 +169,7 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         _safeGet('$_apiBaseUrl/vendors', headers),
         _safeGet('$_apiBaseUrl/candidates', headers),
         _safeGet('$_apiBaseUrl/videos', headers),
+        _safeGet('$_apiBaseUrl/qc-tickets/active-reviewers', headers),
       ]);
 
       // 1. Dashboard Stats Parsing
@@ -284,20 +285,44 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 'vendor': vid['vendor_name']?.toString() ?? vid['vendor']?.toString() ?? 'ABC Solutions',
                 'duration': '${vid['duration'] ?? 15} Mins',
                 'status': vid['status']?.toString() ?? 'Pending QC',
+                'assigned_reviewer_id': vid['assigned_reviewer_id']?.toString() ?? '',
+                'assigned_reviewer_name': vid['assigned_reviewer_name']?.toString() ?? '',
               });
             }
             if (mounted && tempQC.isNotEmpty) {
               setState(() {
                 _qcSubmissions.clear();
                 _qcSubmissions.addAll(tempQC);
-                _pendingQCCount = _qcSubmissions.length;
+              });
+            }
+          }
+        } catch (_) {}
+      }
 
-                // Dynamically populate live notifications center activities
-                _recentActivities.clear();
-                for (var cand in _candidates.take(2)) {
-                  _recentActivities.add({
-                    'title': 'Candidate Registration',
-                    'subtitle': '${cand['name']} registered under ${cand['vendorCode'] ?? "Vendor"}',
+      // 5. Active QC Members Parsing
+      if (results.length > 4 && results[4].statusCode == 200) {
+        try {
+          final body = jsonDecode(results[4].body);
+          final List items = body['data'] is List ? body['data'] : [];
+          if (items.isNotEmpty) {
+            final List<Map<String, dynamic>> tempMembers = [];
+            for (var m in items) {
+              tempMembers.add({
+                'id': m['id']?.toString() ?? m['reviewer_id']?.toString() ?? '',
+                'name': m['name']?.toString() ?? m['reviewer_name']?.toString() ?? 'QC Specialist',
+                'email': m['email']?.toString() ?? m['reviewer_email']?.toString() ?? '',
+                'role': m['role']?.toString() ?? 'qc',
+              });
+            }
+            if (mounted && tempMembers.isNotEmpty) {
+              setState(() {
+                _qcMembers.clear();
+                _qcMembers.addAll(tempMembers);
+              });
+            }
+          }
+        } catch (_) {}
+      }
                     'time': '10 mins ago',
                     'icon': Icons.person_add_rounded,
                     'color': const Color(0xFF2563EB),
@@ -1599,10 +1624,9 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
 
   // TAB 3: QC QUEUE TAB (Pending & In-Review Queue)
   Widget _buildQCQueueTab() {
-    _checkAndReclaimInactiveQCTickets();
     final pendingItems = _qcSubmissions.where((item) {
       final st = (item['status'] ?? 'PENDING_QC').toString().toUpperCase().replaceAll(' ', '_');
-      final assigned = item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc'] ?? item['assigned_reviewer_id'];
+      final assigned = item['assigned_reviewer_id'] ?? item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc'];
       final isUnassigned = assigned == null || assigned.toString().isEmpty || assigned.toString().toLowerCase().contains('unassigned');
 
       // Display ONLY unassigned videos with PENDING_QC status waiting for Admin ticket assignment
@@ -2230,16 +2254,6 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         ? _qcMembers.map((m) => m['name']?.toString() ?? 'QC Specialist').toList()
         : ['QC Lead Specialist', 'QC Reviewer Team A', 'QC Reviewer Team B'];
 
-    int memberIndex = 0;
-    for (var video in pendingList) {
-      final reviewerName = reviewers[memberIndex % reviewers.length];
-      video['status'] = 'In Review';
-      video['assignedTo'] = reviewerName;
-      video['assigned_to'] = reviewerName;
-      memberIndex++;
-    }
-
-    // Call backend API if connected
     try {
       final headers = await AuthService.getAuthHeaders();
       await http.post(
@@ -2247,10 +2261,13 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         headers: headers,
         body: jsonEncode({
           'strategy': 'EQUAL_DISTRIBUTION',
+          'ticket_ids': pendingList.map((p) => p['raw_id'] ?? p['id']).toList(),
           'unassigned_count': pendingList.length,
         }),
       ).timeout(const Duration(seconds: 8));
     } catch (_) {}
+
+    await _loadDashboardData();
 
     // Persist to SharedPreferences and Web LocalStorage
     try {
@@ -2428,16 +2445,11 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                 );
                 if (item.isNotEmpty) {
                   final targetMember = _qcMembers.firstWhere(
-                    (m) => m['name']?.toString() == selectedReviewer,
+                    (m) => m['name']?.toString() == selectedReviewer || m['id']?.toString() == selectedReviewer,
                     orElse: () => <String, dynamic>{},
                   );
-                  final revId = targetMember['id']?.toString() ?? '00000000-0000-0000-0000-000000000004';
-
-                  setState(() {
-                    item['status'] = 'In Review';
-                    item['assignedTo'] = selectedReviewer;
-                    item['assigned_to'] = selectedReviewer;
-                  });
+                  final revId = targetMember['id']?.toString() ?? (targetMember['reviewer_id']?.toString() ?? '30000000-0000-4000-8000-000000000001');
+                  final revName = targetMember['name']?.toString() ?? selectedReviewer;
 
                   try {
                     final headers = await AuthService.getAuthHeaders();
@@ -2447,16 +2459,18 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
                       headers: headers,
                       body: jsonEncode({
                         'video_id': videoId,
-                        'ticket_id': item['ticket_id'] ?? videoId,
+                        'ticket_id': item['ticket_id'] ?? item['raw_id'] ?? videoId,
                         'reviewer_id': revId,
-                        'reviewer_name': selectedReviewer,
+                        'reviewer_name': revName,
                       }),
                     ).timeout(const Duration(seconds: 4));
                   } catch (_) {}
 
+                  _loadDashboardData();
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Assigned video to "$selectedReviewer" ✓'),
+                      content: Text('Assigned video to "$revName" ✓'),
                       backgroundColor: const Color(0xFF7C3AED),
                       behavior: SnackBarBehavior.floating,
                     ),
