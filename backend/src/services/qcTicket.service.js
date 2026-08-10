@@ -120,7 +120,7 @@ class QCTicketService {
       let targetUser = null;
       if (reviewerId) {
         const uRes = await client.query(
-          `SELECT id, full_name, email FROM users WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text) OR LOWER(full_name) = LOWER($1::text)`,
+          `SELECT id, full_name, email FROM users WHERE id::text = $1::text OR LOWER(email) = LOWER($1::text) OR LOWER(full_name) = LOWER($1::text)`,
           [reviewerId]
         );
         if (uRes.rows.length > 0) targetUser = uRes.rows[0];
@@ -507,12 +507,11 @@ class QCTicketService {
       if (reviewerId) {
         params.push(reviewerId);
         queryText += ` AND (
-          t.assigned_reviewer_id = $${params.length}
-          OR t.assigned_reviewer_id::text = $${params.length}::text
+          t.assigned_reviewer_id::text = $${params.length}::text
           OR t.assigned_reviewer_id IN (
-            SELECT reviewer_id FROM reviewer_activity WHERE reviewer_id = $${params.length} OR reviewer_id::text = $${params.length}::text OR LOWER(reviewer_email) = LOWER($${params.length}::text)
+            SELECT reviewer_id FROM reviewer_activity WHERE reviewer_id::text = $${params.length}::text OR LOWER(reviewer_email) = LOWER($${params.length}::text)
             UNION
-            SELECT id FROM users WHERE id = $${params.length} OR id::text = $${params.length}::text OR LOWER(email) = LOWER($${params.length}::text)
+            SELECT id FROM users WHERE id::text = $${params.length}::text OR LOWER(email) = LOWER($${params.length}::text)
           )
           OR LOWER(t.assigned_reviewer_name) LIKE LOWER($${params.length}::text)
         )`;
@@ -540,12 +539,11 @@ class QCTicketService {
         FROM qc_tickets
         WHERE deleted_at IS NULL
           AND (
-            assigned_reviewer_id = $1
-            OR assigned_reviewer_id::text = $1::text
+            assigned_reviewer_id::text = $1::text
             OR assigned_reviewer_id IN (
-              SELECT id FROM users WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text)
+              SELECT id FROM users WHERE id::text = $1::text OR LOWER(email) = LOWER($1::text)
               UNION
-              SELECT reviewer_id FROM reviewer_activity WHERE reviewer_id = $1 OR reviewer_id::text = $1::text OR LOWER(reviewer_email) = LOWER($1::text)
+              SELECT reviewer_id FROM reviewer_activity WHERE reviewer_id::text = $1::text OR LOWER(reviewer_email) = LOWER($1::text)
             )
           )
       `;

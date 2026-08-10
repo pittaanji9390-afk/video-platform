@@ -228,6 +228,15 @@ const patches = [
   `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS vendor_code VARCHAR(50)`,
   `ALTER TABLE candidates ADD CONSTRAINT uq_candidates_candidate_code UNIQUE (candidate_code)`,
   `ALTER TABLE vendors ADD CONSTRAINT uq_vendors_vendor_code UNIQUE (vendor_code)`,
+
+  // 18. Ensure qc_tickets and notifications missing columns
+  `ALTER TABLE qc_tickets ADD COLUMN IF NOT EXISTS project_id VARCHAR(100) DEFAULT 'PRJ-DEFAULT'`,
+  `ALTER TABLE qc_tickets ADD COLUMN IF NOT EXISTS upload_date TIMESTAMPTZ DEFAULT NOW()`,
+  `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS role VARCHAR(50)`,
+  `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_role VARCHAR(50)`,
+  `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_type VARCHAR(50)`,
+  `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS related_video_id UUID`,
+  `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS related_task_id UUID`,
 ];
 
 async function runPatches() {

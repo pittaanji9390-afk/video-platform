@@ -365,7 +365,7 @@ class AuthService {
 
       // 1. Query users table
       const userRes = await db.query(
-        'SELECT id, email, full_name, role, vendor_id, is_active, created_at FROM users WHERE id = $1 OR LOWER(email) = LOWER($2)',
+        'SELECT id, email, full_name, role, vendor_id, is_active, created_at FROM users WHERE id::text = $1::text OR LOWER(email) = LOWER($2)',
         [userId || '00000000-0000-0000-0000-000000000001', email || '']
       );
       if (userRes.rows.length > 0) profile = userRes.rows[0];
@@ -373,20 +373,20 @@ class AuthService {
       // 2. Query candidates table for candidate specific details
       if (role === 'candidate' || (profile && profile.role === 'candidate')) {
         const candRes = await db.query(
-          'SELECT c.id, c.candidate_code, c.full_name, c.email, c.phone, c.vendor_id, v.vendor_code, v.company_name, c.is_active, c.created_at FROM candidates c LEFT JOIN vendors v ON c.vendor_id = v.id WHERE c.id = $1 OR LOWER(c.email) = LOWER($2)',
+          'SELECT c.id, c.candidate_code, c.full_name, c.email, c.phone, c.vendor_id, v.vendor_code, v.company_name, c.is_active, c.created_at FROM candidates c LEFT JOIN vendors v ON c.vendor_id = v.id WHERE c.id::text = $1::text OR LOWER(c.email) = LOWER($2)',
           [userId || '00000000-0000-0000-0000-000000000002', email || '']
         );
         if (candRes.rows.length > 0) {
           const c = candRes.rows[0];
           profile = {
             id: c.id,
-            candidate_code: c.candidate_code || 'CAN-01',
+            candidate_code: c.candidate_code || 'CAN-0001',
             email: c.email || profile?.email || email,
             full_name: c.full_name || profile?.full_name || 'Candidate User',
             role: 'candidate',
             phone: c.phone || '',
             vendor_id: c.vendor_id,
-            vendor_code: c.vendor_code || 'VENDOR001',
+            vendor_code: c.vendor_code || 'VEN-0001',
             company_name: c.company_name || 'Apex Video Solutions',
             is_active: c.is_active,
             created_at: c.created_at,
@@ -397,7 +397,7 @@ class AuthService {
       // 3. Query vendors table
       if (role === 'vendor' || (profile && profile.role === 'vendor')) {
         const venRes = await db.query(
-          'SELECT id, vendor_code, company_name, contact_person, email, phone, is_active, created_at FROM vendors WHERE id = $1 OR LOWER(email) = LOWER($2)',
+          'SELECT id, vendor_code, company_name, contact_person, email, phone, is_active, created_at FROM vendors WHERE id::text = $1::text OR LOWER(email) = LOWER($2)',
           [userId || '00000000-0000-0000-0000-000000000003', email || '']
         );
         if (venRes.rows.length > 0) {
@@ -419,7 +419,7 @@ class AuthService {
       // 4. Query admins table
       if (role === 'admin' || (profile && profile.role === 'admin')) {
         const adminRes = await db.query(
-          'SELECT id, email, full_name, username, phone, is_active, created_at FROM admins WHERE id = $1 OR LOWER(email) = LOWER($2)',
+          'SELECT id, email, full_name, username, phone, is_active, created_at FROM admins WHERE id::text = $1::text OR LOWER(email) = LOWER($2)',
           [userId || '00000000-0000-0000-0000-000000000001', email || '']
         );
         if (adminRes.rows.length > 0) {

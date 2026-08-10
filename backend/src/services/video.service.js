@@ -10,16 +10,41 @@ const qcTicketService = require('./qcTicket.service');
 const notificationService = require('./notification.service');
 
 class VideoService {
-  async createVideo({ candidate_id, vendor_id, title, description, duration, environment_tag, latitude, longitude, device_id, recording_date, status = 'PENDING_QC' }) {
+  async createVideo({ candidate_id, vendor_id, title, description, duration, environment_tag, latitude, longitude, device_id, recording_date, status = 'pending_qc' }) {
     try {
+      let validCandidateId = candidate_id;
+      let validVendorId = vendor_id;
+
+      if (validCandidateId) {
+        const candRes = await db.query(
+          `SELECT c.id AS candidate_id, c.vendor_id
+           FROM candidates c WHERE (c.id::text = $1::text OR LOWER(c.email) = LOWER($1::text)) AND c.deleted_at IS NULL
+           UNION
+           SELECT u.id AS candidate_id, u.vendor_id
+           FROM users u WHERE (u.id::text = $1::text OR LOWER(u.email) = LOWER($1::text)) AND u.deleted_at IS NULL
+           LIMIT 1`,
+          [validCandidateId]
+        ).catch(() => ({ rowCount: 0, rows: [] }));
+
+        if (candRes.rowCount > 0) {
+          if (candRes.rows[0].candidate_id) validCandidateId = candRes.rows[0].candidate_id;
+          if (candRes.rows[0].vendor_id && !validVendorId) validVendorId = candRes.rows[0].vendor_id;
+        }
+      }
+
+      if (!validVendorId) {
+        const anyVen = await db.query('SELECT id FROM vendors WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1').catch(() => ({ rowCount: 0, rows: [] }));
+        if (anyVen.rowCount > 0) validVendorId = anyVen.rows[0].id;
+      }
+
       const insertQuery = `
         INSERT INTO videos (candidate_id, vendor_id, title, description, duration, environment_tag, latitude, longitude, device_id, recording_date, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `;
       const result = await db.query(insertQuery, [
-        candidate_id || 'c1000000-0000-0000-0000-000000000001',
-        vendor_id || 'v0000000-0000-0000-0000-000000000001',
+        validCandidateId || '00000000-0000-0000-0000-000000000001',
+        validVendorId || '00000000-0000-0000-0000-000000000003',
         title || 'New Video Recording',
         description || null,
         duration || 45,
@@ -28,35 +53,13 @@ class VideoService {
         longitude || 78.4867,
         device_id || 'iPhone 15 Pro',
         recording_date || new Date(),
-        'PENDING_QC',
+        'pending_qc',
       ]);
 
       const video = result.rows[0];
 
       // Auto-create QC Ticket and trigger equal distribution
       await qcTicketService.createTicketForVideo(video).catch(() => {});
-
-      // Issue real-time notification to Candidate
-      await notificationService.createNotification({
-        user_id: video.candidate_id,
-        role: 'candidate',
-        title: 'Video Uploaded & Pending QC',
-        message: `Your video "${video.title}" has been uploaded and sent for Quality Check.`,
-        video_id: video.id,
-        type: 'video_uploaded',
-        color: '#F59E0B',
-      }).catch(() => {});
-
-      // Issue notification to Vendor
-      await notificationService.createNotification({
-        user_id: video.vendor_id,
-        role: 'vendor',
-        title: 'New Video Uploaded by Candidate',
-        message: `Candidate uploaded "${video.title}" in category ${video.environment_tag}.`,
-        video_id: video.id,
-        type: 'video_uploaded',
-        color: '#0EA5E9',
-      }).catch(() => {});
 
       return video;
     } catch (e) {
@@ -65,38 +68,48 @@ class VideoService {
     }
   }
 
-  async uploadVideo({ video_id, candidate_id, vendor_id, file, environment_tag, title }) {
+  async uploadVideo({ video_id, candidate_id, user_email, vendor_id, file, environment_tag, title }) {
     const relativePath = path.join('uploads', 'videos', file.filename || file.originalname).replace(/\\/g, '/');
     try {
-      if (!candidate_id) {
+      if (!candidate_id && !user_email) {
         throw new Error('Candidate ID is required for video upload');
       }
 
       let validCandidateId = candidate_id;
-      let validVendorId = null;
+      let validVendorId = vendor_id;
 
       // 1. Resolve candidate's id (UUID) and vendor_id (UUID)
-      if (validCandidateId) {
-        const candRes = await db.query(
-          `SELECT c.id AS candidate_id, c.vendor_id
-           FROM candidates c WHERE (c.id = $1 OR c.id::text = $1::text OR LOWER(c.email) = LOWER($1)) AND c.deleted_at IS NULL
-           UNION
-           SELECT u.id AS candidate_id, u.vendor_id
-           FROM users u WHERE (u.id = $1 OR u.id::text = $1::text OR LOWER(u.email) = LOWER($1)) AND u.deleted_at IS NULL
-           LIMIT 1`,
+      const lookupVal = candidate_id || user_email;
+      const candRes = await db.query(
+        `SELECT c.id AS candidate_id, c.vendor_id
+         FROM candidates c WHERE (c.id::text = $1::text OR LOWER(c.email) = LOWER($1::text) OR c.candidate_code::text = $1::text) AND c.deleted_at IS NULL
+         UNION
+         SELECT u.id AS candidate_id, u.vendor_id
+         FROM users u WHERE (u.id::text = $1::text OR LOWER(u.email) = LOWER($1::text)) AND u.is_active = TRUE
+         LIMIT 1`,
+        [lookupVal]
+      ).catch(() => ({ rowCount: 0, rows: [] }));
+
+      if (candRes.rowCount > 0 && candRes.rows[0].candidate_id) {
+        validCandidateId = candRes.rows[0].candidate_id;
+        if (candRes.rows[0].vendor_id) validVendorId = candRes.rows[0].vendor_id;
+      }
+
+      // If validVendorId is missing/null, fetch vendor_id specifically from candidates table if possible
+      if (!validVendorId && validCandidateId) {
+        const candVenRes = await db.query(
+          `SELECT vendor_id FROM candidates WHERE (id::text = $1::text OR LOWER(email) = LOWER($1::text)) AND vendor_id IS NOT NULL LIMIT 1`,
           [validCandidateId]
         ).catch(() => ({ rowCount: 0, rows: [] }));
-
-        if (candRes.rowCount > 0) {
-          if (candRes.rows[0].candidate_id) validCandidateId = candRes.rows[0].candidate_id;
-          if (candRes.rows[0].vendor_id) validVendorId = candRes.rows[0].vendor_id;
+        if (candVenRes.rowCount > 0 && candVenRes.rows[0].vendor_id) {
+          validVendorId = candVenRes.rows[0].vendor_id;
         }
       }
 
-      // 2. If vendor_id passed directly or not resolved yet, validate against vendors table
-      if (vendor_id) {
+      // 2. If vendor_id passed directly or as vendor_code, resolve against vendors table
+      if (!validVendorId && vendor_id) {
         const checkPassedVen = await db.query(
-          'SELECT id FROM vendors WHERE (id = $1 OR id::text = $1::text OR LOWER(vendor_code) = LOWER($1::text)) AND deleted_at IS NULL LIMIT 1',
+          `SELECT id FROM vendors WHERE (id::text = $1::text OR LOWER(vendor_code) = LOWER($1::text)) AND deleted_at IS NULL LIMIT 1`,
           [vendor_id]
         ).catch(() => ({ rowCount: 0, rows: [] }));
         if (checkPassedVen.rowCount > 0) {
@@ -104,28 +117,45 @@ class VideoService {
         }
       }
 
-      // 3. Fallback: If vendor_id still not resolved, assign first active vendor
+      // 3. Fallback: If validVendorId is STILL null, assign first active vendor
       if (!validVendorId) {
-        const anyVen = await db.query('SELECT id FROM vendors WHERE deleted_at IS NULL AND is_active = TRUE ORDER BY created_at ASC LIMIT 1').catch(() => ({ rowCount: 0, rows: [] }));
+        const anyVen = await db.query(
+          `SELECT id FROM vendors WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1`
+        ).catch(() => ({ rowCount: 0, rows: [] }));
         if (anyVen.rowCount > 0) {
           validVendorId = anyVen.rows[0].id;
+        }
+      }
+
+      // 4. Guarantee fallback vendor if vendors table is empty
+      if (!validVendorId) {
+        const defaultVenCode = 'VEN-0001';
+        const newVen = await db.query(
+          `INSERT INTO vendors (company_name, contact_person, email, phone, vendor_code, is_active, created_at, updated_at)
+           VALUES ('Default Vendor', 'Default Admin', 'vendor@videoplatform.com', '+91 98765 00000', $1, TRUE, NOW(), NOW())
+           ON CONFLICT (email) DO UPDATE SET updated_at = NOW()
+           RETURNING id`,
+          [defaultVenCode]
+        ).catch(() => ({ rows: [] }));
+        if (newVen.rows && newVen.rows.length > 0) {
+          validVendorId = newVen.rows[0].id;
         }
       }
 
       let videoRecord;
       if (video_id && !video_id.startsWith('vid-')) {
         const updateQuery = `
-          UPDATE videos SET file_name = $1, local_path = $2, file_size = $3, upload_date = NOW(), status = 'PENDING_QC', environment_tag = COALESCE($4, environment_tag), updated_at = NOW()
-          WHERE id = $5 AND deleted_at IS NULL RETURNING *
+          UPDATE videos SET file_name = $1, local_path = $2, file_size = $3, upload_date = NOW(), status = 'pending_qc', environment_tag = COALESCE($4, environment_tag), vendor_id = COALESCE(vendor_id, $5), updated_at = NOW()
+          WHERE (id = $6 OR id::text = $6::text) AND deleted_at IS NULL RETURNING *
         `;
-        const result = await db.query(updateQuery, [file.originalname || file.filename, relativePath, file.size || 10485760, environment_tag, video_id]);
+        const result = await db.query(updateQuery, [file.originalname || file.filename, relativePath, file.size || 10485760, environment_tag, validVendorId, video_id]);
         videoRecord = result.rows[0];
       }
 
       if (!videoRecord) {
         const insertQuery = `
           INSERT INTO videos (candidate_id, vendor_id, title, file_name, local_path, file_size, environment_tag, upload_date, status, duration)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 'PENDING_QC', 15) RETURNING *
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), 'pending_qc', 15) RETURNING *
         `;
         const videoTitle = title || `${environment_tag || "Recorded"} Dataset Video`;
         const result = await db.query(insertQuery, [
@@ -142,7 +172,7 @@ class VideoService {
 
       // Auto-create QC Ticket and trigger equal reviewer distribution
       if (videoRecord) {
-        await qcTicketService.createTicketForVideo(videoRecord).catch((err) => console.error('QC Ticket Error:', err.message));
+        await qcTicketService.createTicketForVideo(videoRecord).catch((err) => logger.error('QC Ticket Error:', { error: err.message }));
 
         await notificationService.createNotification({
           user_id: videoRecord.candidate_id,
@@ -179,7 +209,7 @@ class VideoService {
 
       return videoRecord;
     } catch (e) {
-      console.error('Error uploading video to PostgreSQL:', e.message);
+      logger.error('Error uploading video to PostgreSQL:', { error: e.message });
       throw e;
     }
   }
@@ -188,7 +218,7 @@ class VideoService {
     try {
       const updateQuery = `
         UPDATE videos SET duration = $1, latitude = $2, longitude = $3, environment_tag = $4, device_id = $5, recording_date = $6, updated_at = NOW()
-        WHERE id = $7 AND deleted_at IS NULL RETURNING *
+        WHERE (id = $7 OR id::text = $7::text) AND deleted_at IS NULL RETURNING *
       `;
       const result = await db.query(updateQuery, [duration, latitude, longitude, environment_tag, device_id, recording_date, id]);
       if (result.rowCount === 0) throw new Error('Video not found');
@@ -229,24 +259,24 @@ class VideoService {
       if (vendor_id || vendor_code) {
         if (vendor_id && vendor_code) {
           params.push(vendor_id, vendor_code);
-          const venCond = ` AND (v.vendor_id = $${params.length - 1} OR c.vendor_id = $${params.length - 1} OR ven.id = $${params.length - 1} OR LOWER(ven.vendor_code) = LOWER($${params.length}))`;
+          const venCond = ` AND (v.vendor_id::text = $${params.length - 1}::text OR c.vendor_id::text = $${params.length - 1}::text OR ven.id::text = $${params.length - 1}::text OR LOWER(ven.vendor_code) = LOWER($${params.length}))`;
           countQuery += venCond;
           selectQuery += venCond;
         } else if (vendor_id) {
           params.push(vendor_id);
-          const venCond = ` AND (v.vendor_id = $${params.length} OR c.vendor_id = $${params.length} OR ven.id = $${params.length} OR LOWER(ven.vendor_code) = LOWER($${params.length}))`;
+          const venCond = ` AND (v.vendor_id::text = $${params.length}::text OR c.vendor_id::text = $${params.length}::text OR ven.id::text = $${params.length}::text OR LOWER(ven.vendor_code) = LOWER($${params.length}))`;
           countQuery += venCond;
           selectQuery += venCond;
         } else {
           params.push(vendor_code);
-          const venCond = ` AND (LOWER(ven.vendor_code) = LOWER($${params.length}) OR v.vendor_id = $${params.length} OR c.vendor_id = $${params.length})`;
+          const venCond = ` AND (LOWER(ven.vendor_code) = LOWER($${params.length}) OR v.vendor_id::text = $${params.length}::text OR c.vendor_id::text = $${params.length}::text)`;
           countQuery += venCond;
           selectQuery += venCond;
         }
       }
       if (assigned_reviewer_id) {
         params.push(assigned_reviewer_id);
-        const revCond = ` AND (t.assigned_reviewer_id = $${params.length} OR t.assigned_reviewer_id::text = $${params.length}::text)`;
+        const revCond = ` AND (t.assigned_reviewer_id::text = $${params.length}::text)`;
         countQuery += revCond;
         selectQuery += revCond;
       }
@@ -405,12 +435,11 @@ class VideoService {
       if (candidateId) {
         params.push(candidateId);
         queryText += ` AND (
-          candidate_id = $1
-          OR candidate_id::text = $1::text
+          candidate_id::text = $1::text
           OR candidate_id IN (
-            SELECT id FROM candidates WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text)
+            SELECT id FROM candidates WHERE id::text = $1::text OR LOWER(email) = LOWER($1::text) OR candidate_code::text = $1::text
             UNION
-            SELECT id FROM users WHERE id = $1 OR id::text = $1::text OR LOWER(email) = LOWER($1::text)
+            SELECT id FROM users WHERE id::text = $1::text OR LOWER(email) = LOWER($1::text)
           )
         )`;
       }

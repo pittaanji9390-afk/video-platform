@@ -120,13 +120,13 @@ class CandidateService {
       const params = [];
       if (vendor_id) {
         params.push(vendor_id);
-        countQuery += ` AND c.vendor_id = $${params.length}`;
-        selectQuery += ` AND c.vendor_id = $${params.length}`;
+        countQuery += ` AND c.vendor_id::text = $${params.length}::text`;
+        selectQuery += ` AND c.vendor_id::text = $${params.length}::text`;
       }
       if (vendor_code) {
         params.push(vendor_code);
-        countQuery += ` AND (LOWER(v.vendor_code) = LOWER($${params.length}) OR c.vendor_id = $${params.length})`;
-        selectQuery += ` AND (LOWER(v.vendor_code) = LOWER($${params.length}) OR c.vendor_id = $${params.length})`;
+        countQuery += ` AND (LOWER(v.vendor_code) = LOWER($${params.length}) OR c.vendor_id::text = $${params.length}::text)`;
+        selectQuery += ` AND (LOWER(v.vendor_code) = LOWER($${params.length}) OR c.vendor_id::text = $${params.length}::text)`;
       }
 
       const countResult = await db.query(countQuery, params);

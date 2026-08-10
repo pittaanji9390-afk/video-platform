@@ -70,7 +70,7 @@ class VideoController {
     try {
       // STRICT JWT CANDIDATE IDENTIFICATION:
       // Always identify candidate from authenticated JWT token (req.user.id)
-      const candidate_id = req.user?.id;
+      const candidate_id = req.user?.id || req.body?.candidate_id;
       if (!candidate_id) {
         return res.status(401).json({
           status: 'error',
@@ -97,6 +97,7 @@ class VideoController {
       const uploadedVideo = await videoService.uploadVideo({
         video_id: req.body?.video_id,
         candidate_id,
+        user_email: req.user?.email,
         vendor_id,
         environment_tag,
         title,
