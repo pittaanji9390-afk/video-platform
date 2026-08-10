@@ -69,7 +69,10 @@ class AuthService {
     if (!userRow || userRole === 'candidate') {
       try {
         const candidateRes = await db.query(
-          'SELECT id, candidate_code, vendor_id, email, phone, password_hash, full_name, is_active FROM candidates WHERE (LOWER(email) = $1 OR phone = $1 OR REPLACE(phone, \'+\', \'\') = REPLACE($1, \'+\', \'\') OR id = $2) AND deleted_at IS NULL',
+          `SELECT c.id, c.candidate_code, c.vendor_id, c.email, c.phone, c.password_hash, c.full_name, c.is_active, v.vendor_code
+           FROM candidates c
+           LEFT JOIN vendors v ON c.vendor_id = v.id
+           WHERE (LOWER(c.email) = $1 OR c.phone = $1 OR REPLACE(c.phone, '+', '') = REPLACE($1, '+', '') OR c.id::text = $2::text) AND c.deleted_at IS NULL`,
           [identifier, userRow ? userRow.id : '00000000-0000-0000-0000-000000000000']
         );
         if (candidateRes.rows.length > 0) {
@@ -79,7 +82,8 @@ class AuthService {
             userRole = 'candidate';
           } else {
             userRow.candidate_code = cand.candidate_code || userRow.candidate_code;
-            userRow.vendor_id = userRow.vendor_id || cand.vendor_id;
+            userRow.vendor_id = cand.vendor_id || userRow.vendor_id;
+            userRow.vendor_code = cand.vendor_code || userRow.vendor_code;
             userRow.phone = cand.phone || userRow.phone;
           }
         }
@@ -145,6 +149,7 @@ class AuthService {
         email: userRow.email,
         name: userRow.full_name,
         role: userRole,
+        vendor_id: userRow.vendor_id || null,
         candidate_code: userRow.candidate_code || null,
         vendor_code: userRow.vendor_code || null,
       },
@@ -180,6 +185,8 @@ class AuthService {
         email: userRow.email,
         full_name: userRow.full_name,
         role: userRole,
+        vendor_id: userRow.vendor_id || null,
+        vendorId: userRow.vendor_id || null,
         candidate_code: userRow.candidate_code || null,
         vendor_code: userRow.vendor_code || null,
         phone: userRow.phone || null,
@@ -320,6 +327,15 @@ class AuthService {
       };
     }
 
+    // Fetch vendor_code for candidateRow if not attached
+    let vendorCodeStr = cleanVendorCode;
+    if (vendorId) {
+      try {
+        const vRes = await db.query('SELECT vendor_code FROM vendors WHERE id = $1', [vendorId]);
+        if (vRes.rows.length > 0) vendorCodeStr = vRes.rows[0].vendor_code || cleanVendorCode;
+      } catch (_) {}
+    }
+
     // 6. Generate JWT tokens
     const accessToken = jwt.sign(
       {
@@ -327,6 +343,9 @@ class AuthService {
         email: candidateRow.email,
         name: candidateRow.full_name,
         role: 'candidate',
+        vendor_id: candidateRow.vendor_id || vendorId,
+        candidate_code: candidateRow.candidate_code || candCode,
+        vendor_code: vendorCodeStr,
       },
       config.jwt.secret,
       { expiresIn: config.jwt.expiresIn }
@@ -352,6 +371,9 @@ class AuthService {
         email: candidateRow.email,
         full_name: candidateRow.full_name,
         role: 'candidate',
+        vendor_id: candidateRow.vendor_id || vendorId,
+        vendorId: candidateRow.vendor_id || vendorId,
+        vendor_code: vendorCodeStr,
       },
     };
   }

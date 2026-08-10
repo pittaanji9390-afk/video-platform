@@ -6,11 +6,12 @@ const { Pool } = require('pg');
 const config = require('../config');
 const logger = require('../utils/logger');
 
-const useSSL = process.env.DB_SSL === 'true' || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require'));
+const dbUrl = process.env.DATABASE_URL || config.database.url;
+const useSSL = process.env.DB_SSL === 'true' || (dbUrl && dbUrl.includes('sslmode=require'));
 
-const poolConfig = process.env.DATABASE_URL
+const poolConfig = dbUrl
   ? {
-      connectionString: process.env.DATABASE_URL,
+      connectionString: dbUrl,
       max: 30,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,

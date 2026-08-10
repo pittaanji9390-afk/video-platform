@@ -41,8 +41,9 @@ class VideoController {
       } = req.body;
 
       const newVideo = await videoService.createVideo({
-        candidate_id: (req.user && req.user.role === 'candidate') ? req.user.id : candidate_id,
-        vendor_id,
+        candidate_id: (req.user && req.user.role === 'candidate') ? req.user.id : (candidate_id || req.user?.id),
+        user_email: req.user?.email,
+        vendor_id: vendor_id || req.user?.vendor_id || null,
         title,
         description,
         duration,

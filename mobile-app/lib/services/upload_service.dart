@@ -70,13 +70,34 @@ class UploadService {
 
         onProgress?.call(0.9);
 
-        final data = jsonDecode(res.body);
-        final video = data['data'] ?? {};
-        final videoId = video['id']?.toString() ??
-                        video['video_id']?.toString() ??
-                        'WEB-VID-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+        if (res.statusCode != 200 && res.statusCode != 201) {
+          onProgress?.call(0.0);
+          try {
+            final errData = jsonDecode(res.body);
+            return UploadResult(
+              isSuccess: false,
+              message: errData['message'] ?? errData['error'] ?? 'Upload failed (${res.statusCode})',
+            );
+          } catch (_) {
+            return UploadResult(
+              isSuccess: false,
+              message: 'Upload failed with server status ${res.statusCode}',
+            );
+          }
+        }
 
-        // Persist locally
+        final data = jsonDecode(res.body);
+        final video = (data['data'] is Map) ? data['data'] : (data['video'] ?? {});
+        final videoId = video['id']?.toString() ?? video['video_id']?.toString() ?? '';
+
+        if (videoId.isEmpty) {
+          return UploadResult(
+            isSuccess: false,
+            message: 'Server did not return a valid video ID',
+          );
+        }
+
+        // Persist locally for immediate UI update
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_uploaded_video_id', videoId);
         final history = prefs.getStringList('uploaded_video_ids') ?? [];
@@ -103,7 +124,6 @@ class UploadService {
           rawData: data,
         );
       } catch (e) {
-        // Return actual failure — do not fake success
         onProgress?.call(0.0);
         return UploadResult(
           isSuccess: false,

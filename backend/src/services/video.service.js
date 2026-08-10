@@ -13,7 +13,7 @@ class VideoService {
   async createVideo({ candidate_id, vendor_id, title, description, duration, environment_tag, latitude, longitude, device_id, recording_date, status = 'pending_qc' }) {
     try {
       let validCandidateId = candidate_id;
-      let validVendorId = vendor_id;
+      let validVendorId = null;
 
       if (validCandidateId) {
         const candRes = await db.query(
@@ -21,14 +21,24 @@ class VideoService {
            FROM candidates c WHERE (c.id::text = $1::text OR LOWER(c.email) = LOWER($1::text)) AND c.deleted_at IS NULL
            UNION
            SELECT u.id AS candidate_id, u.vendor_id
-           FROM users u WHERE (u.id::text = $1::text OR LOWER(u.email) = LOWER($1::text)) AND u.deleted_at IS NULL
+           FROM users u WHERE (u.id::text = $1::text OR LOWER(u.email) = LOWER($1::text)) AND u.is_active = TRUE
            LIMIT 1`,
           [validCandidateId]
         ).catch(() => ({ rowCount: 0, rows: [] }));
 
         if (candRes.rowCount > 0) {
           if (candRes.rows[0].candidate_id) validCandidateId = candRes.rows[0].candidate_id;
-          if (candRes.rows[0].vendor_id && !validVendorId) validVendorId = candRes.rows[0].vendor_id;
+          if (candRes.rows[0].vendor_id) validVendorId = candRes.rows[0].vendor_id;
+        }
+      }
+
+      if (vendor_id) {
+        const venRes = await db.query(
+          `SELECT id FROM vendors WHERE (id::text = $1::text OR LOWER(vendor_code) = LOWER($1::text)) AND deleted_at IS NULL LIMIT 1`,
+          [vendor_id]
+        ).catch(() => ({ rowCount: 0, rows: [] }));
+        if (venRes.rowCount > 0) {
+          validVendorId = venRes.rows[0].id;
         }
       }
 
@@ -37,14 +47,22 @@ class VideoService {
         if (anyVen.rowCount > 0) validVendorId = anyVen.rows[0].id;
       }
 
+      if (!validCandidateId) {
+        throw new Error('Valid Candidate ID is required for video creation');
+      }
+
+      if (!validVendorId) {
+        throw new Error('Valid Vendor ID is required for video creation');
+      }
+
       const insertQuery = `
         INSERT INTO videos (candidate_id, vendor_id, title, description, duration, environment_tag, latitude, longitude, device_id, recording_date, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `;
       const result = await db.query(insertQuery, [
-        validCandidateId || '00000000-0000-0000-0000-000000000001',
-        validVendorId || '00000000-0000-0000-0000-000000000003',
+        validCandidateId,
+        validVendorId,
         title || 'New Video Recording',
         description || null,
         duration || 45,
@@ -76,7 +94,7 @@ class VideoService {
       }
 
       let validCandidateId = candidate_id;
-      let validVendorId = vendor_id;
+      let validVendorId = null;
 
       // 1. Resolve candidate's id (UUID) and vendor_id (UUID)
       const lookupVal = candidate_id || user_email;
@@ -95,7 +113,7 @@ class VideoService {
         if (candRes.rows[0].vendor_id) validVendorId = candRes.rows[0].vendor_id;
       }
 
-      // If validVendorId is missing/null, fetch vendor_id specifically from candidates table if possible
+      // If validVendorId is missing/null, fetch vendor_id specifically from candidates table
       if (!validVendorId && validCandidateId) {
         const candVenRes = await db.query(
           `SELECT vendor_id FROM candidates WHERE (id::text = $1::text OR LOWER(email) = LOWER($1::text)) AND vendor_id IS NOT NULL LIMIT 1`,
@@ -106,11 +124,12 @@ class VideoService {
         }
       }
 
-      // 2. If vendor_id passed directly or as vendor_code, resolve against vendors table
-      if (!validVendorId && vendor_id) {
+      // 2. If vendor_id passed directly (or as vendor_code), resolve against vendors table to guarantee UUID
+      const venLookup = vendor_id || validVendorId;
+      if (venLookup) {
         const checkPassedVen = await db.query(
           `SELECT id FROM vendors WHERE (id::text = $1::text OR LOWER(vendor_code) = LOWER($1::text)) AND deleted_at IS NULL LIMIT 1`,
-          [vendor_id]
+          [venLookup]
         ).catch(() => ({ rowCount: 0, rows: [] }));
         if (checkPassedVen.rowCount > 0) {
           validVendorId = checkPassedVen.rows[0].id;

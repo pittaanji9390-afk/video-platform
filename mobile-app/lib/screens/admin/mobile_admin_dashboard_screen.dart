@@ -272,29 +272,33 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
         try {
           final body = jsonDecode(results[3].body);
           final List items = body['data'] is List ? body['data'] : (body['data']?['items'] ?? []);
-          if (items.isNotEmpty) {
-            final List<Map<String, dynamic>> tempQC = [];
-            for (var vid in items) {
-              final id = vid['id']?.toString() ?? '';
-              final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-${tempQC.length + 1}');
-              tempQC.add({
-                'id': shortId,
-                'raw_id': id,
-                'title': vid['title']?.toString() ?? 'Video Recording',
-                'candidateName': vid['candidate_name']?.toString() ?? vid['candidateName']?.toString() ?? 'Candidate',
-                'vendor': vid['vendor_name']?.toString() ?? vid['vendor']?.toString() ?? 'ABC Solutions',
-                'duration': '${vid['duration'] ?? 15} Mins',
-                'status': vid['status']?.toString() ?? 'Pending QC',
-                'assigned_reviewer_id': vid['assigned_reviewer_id']?.toString() ?? '',
-                'assigned_reviewer_name': vid['assigned_reviewer_name']?.toString() ?? '',
-              });
-            }
-            if (mounted && tempQC.isNotEmpty) {
-              setState(() {
-                _qcSubmissions.clear();
-                _qcSubmissions.addAll(tempQC);
-              });
-            }
+          final List<Map<String, dynamic>> tempQC = [];
+          for (var vid in items) {
+            final id = vid['id']?.toString() ?? '';
+            final shortId = id.length >= 8 ? id.substring(0, 8) : (id.isNotEmpty ? id : 'VID-${tempQC.length + 1}');
+            tempQC.add({
+              'id': shortId,
+              'raw_id': id,
+              'title': vid['title']?.toString() ?? 'Video Recording',
+              'candidateName': vid['candidate_name']?.toString() ?? vid['candidateName']?.toString() ?? 'Candidate',
+              'vendor': vid['vendor_name']?.toString() ?? vid['vendor']?.toString() ?? 'Vendor',
+              'duration': '${vid['duration'] ?? 15} Mins',
+              'status': vid['status']?.toString() ?? 'Pending QC',
+              'assigned_reviewer_id': vid['assigned_reviewer_id']?.toString() ?? '',
+              'assigned_reviewer_name': vid['assigned_reviewer_name']?.toString() ?? '',
+            });
+          }
+          if (mounted) {
+            setState(() {
+              _qcSubmissions.clear();
+              _qcSubmissions.addAll(tempQC);
+              _pendingQCCount = _qcSubmissions.where((s) {
+                final st = (s['status'] ?? 'PENDING_QC').toString().toUpperCase().replaceAll(' ', '_');
+                final assigned = s['assigned_reviewer_id'] ?? s['assignedTo'] ?? s['assigned_to'] ?? s['assigned_qc'];
+                final isUnassigned = assigned == null || assigned.toString().isEmpty || assigned.toString().toLowerCase().contains('unassigned');
+                return (st == 'PENDING_QC' || st == 'PENDING' || st == 'UNASSIGNED') && isUnassigned;
+              }).length;
+            });
           }
         } catch (_) {}
       }

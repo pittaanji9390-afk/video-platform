@@ -87,31 +87,11 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Database auth exception: $e');
+      return {
+        'success': false,
+        'message': 'Could not connect to database server ($e). Please check server status.',
+      };
     }
-
-    // 3. Demo / Offline Fallback Mode when database server is unreachable or timed out
-    final role = _determineRole(cleanIdentifier);
-    final isQC = role == 'qc';
-    final isVendor = role == 'vendor';
-    final isAdmin = role == 'admin';
-
-    final userId = isQC
-        ? '30000000-0000-4000-8000-000000000001'
-        : (isAdmin ? '00000000-0000-0000-0000-000000000001' : (isVendor ? '10000000-0000-4000-8000-000000000001' : '20000000-0000-4000-8000-000000000001'));
-    final vendorId = isVendor ? '10000000-0000-4000-8000-000000000001' : '';
-
-    await saveSession(
-      token: 'demo-$role-jwt-token-2026',
-      refreshToken: 'demo-$role-refresh-token-2026',
-      role: role,
-      name: cleanIdentifier.contains('@') ? cleanIdentifier.split('@')[0] : cleanIdentifier,
-      email: cleanIdentifier,
-      userId: userId,
-      vendorId: vendorId,
-      isDemoMode: true,
-    );
-
-    return {'success': true, 'role': role, 'data': {'token': 'demo-$role-jwt-token-2026'}};
   }
 
   static String _determineRole(String email) {
@@ -239,24 +219,27 @@ class AuthService extends ChangeNotifier {
       ).timeout(const Duration(seconds: 6));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        final token = data['token'] ?? data['accessToken'] ?? 'demo_token';
-        final user = data['user'] ?? {};
+        final body = jsonDecode(response.body);
+        final envelope = body['data'] is Map ? body['data'] : body;
+        final token = envelope['token'] ?? envelope['accessToken'] ?? '';
+        final user = envelope['user'] is Map ? envelope['user'] : {};
 
         await saveSession(
           token: token,
-          refreshToken: data['refreshToken'] ?? '',
+          refreshToken: envelope['refreshToken'] ?? '',
           role: 'candidate',
-          name: user['name'] ?? fullName ?? cleanEmail,
+          name: user['full_name']?.toString() ?? user['name']?.toString() ?? fullName ?? cleanEmail,
           email: cleanEmail,
-          userId: user['id']?.toString() ?? 'candidate_${DateTime.now().millisecondsSinceEpoch}',
-          vendorId: vendorCode.trim(),
+          userId: user['id']?.toString() ?? '',
+          vendorId: user['vendor_id']?.toString() ?? user['vendorId']?.toString() ?? '',
+          vendorCode: user['vendor_code']?.toString() ?? user['vendorCode']?.toString() ?? vendorCode.trim(),
+          isDemoMode: false,
         );
 
         return {
           'success': true,
           'message': 'Registration successful! Welcome to ElevateIQ.',
-          'data': data,
+          'data': envelope,
         };
       }
 
@@ -275,24 +258,10 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('signupCandidate exception: $e');
+      return {
+        'success': false,
+        'message': 'Could not connect to database server ($e). Please verify your connection.',
+      };
     }
-
-    // Demo Mode Fallback
-    await saveSession(
-      token: 'demo_token_${DateTime.now().millisecondsSinceEpoch}',
-      refreshToken: 'demo_refresh',
-      role: 'candidate',
-      name: fullName ?? cleanEmail,
-      email: cleanEmail,
-      userId: 'demo_candidate_${DateTime.now().millisecondsSinceEpoch}',
-      vendorId: vendorCode.trim(),
-      isDemoMode: true,
-    );
-
-    return {
-      'success': true,
-      'isDemo': true,
-      'message': 'Registered successfully (demo mode). Opening Candidate Portal...',
-    };
   }
 }
