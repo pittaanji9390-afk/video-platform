@@ -69,7 +69,7 @@ class AuthService {
     if (!userRow || userRole === 'candidate') {
       try {
         const candidateRes = await db.query(
-          'SELECT id, vendor_id, email, phone, password_hash, full_name, is_active FROM candidates WHERE (LOWER(email) = $1 OR phone = $1 OR REPLACE(phone, \'+\', \'\') = REPLACE($1, \'+\', \'\') OR id = $2) AND deleted_at IS NULL',
+          'SELECT id, candidate_code, vendor_id, email, phone, password_hash, full_name, is_active FROM candidates WHERE (LOWER(email) = $1 OR phone = $1 OR REPLACE(phone, \'+\', \'\') = REPLACE($1, \'+\', \'\') OR id = $2) AND deleted_at IS NULL',
           [identifier, userRow ? userRow.id : '00000000-0000-0000-0000-000000000000']
         );
         if (candidateRes.rows.length > 0) {
@@ -78,6 +78,7 @@ class AuthService {
             userRow = cand;
             userRole = 'candidate';
           } else {
+            userRow.candidate_code = cand.candidate_code || userRow.candidate_code;
             userRow.vendor_id = userRow.vendor_id || cand.vendor_id;
             userRow.phone = cand.phone || userRow.phone;
           }
@@ -108,6 +109,8 @@ class AuthService {
 
       userRow = {
         id: '00000000-0000-0000-0000-000000000001',
+        candidate_code: 'CAN-0001',
+        vendor_code: 'VEN-0001',
         email: identifier.includes('@') ? identifier : `${identifier}@videoplatform.com`,
         full_name: identifier.split('@')[0],
         role: role,
@@ -142,6 +145,7 @@ class AuthService {
         email: userRow.email,
         name: userRow.full_name,
         role: userRole,
+        candidate_code: userRow.candidate_code || null,
         vendor_code: userRow.vendor_code || null,
       },
       config.jwt.secret,
@@ -176,6 +180,7 @@ class AuthService {
         email: userRow.email,
         full_name: userRow.full_name,
         role: userRole,
+        candidate_code: userRow.candidate_code || null,
         vendor_code: userRow.vendor_code || null,
         phone: userRow.phone || null,
       },

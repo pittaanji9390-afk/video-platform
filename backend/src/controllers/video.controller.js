@@ -152,9 +152,9 @@ class VideoController {
 
   async getAllVideos(req, res, next) {
     try {
-      let { candidate_id, vendor_id, vendor_code, status, page, limit } = req.query;
+      let { candidate_id, vendor_id, vendor_code, assigned_reviewer_id, status, page, limit } = req.query;
 
-      // STRICT JWT CANDIDATE / VENDOR IDENTIFICATION:
+      // STRICT JWT CANDIDATE / VENDOR / QC IDENTIFICATION:
       if (req.user && req.user.role === 'candidate') {
         candidate_id = req.user.id;
       } else if (req.user && req.user.role === 'vendor') {
@@ -162,7 +162,7 @@ class VideoController {
         vendor_code = req.user.vendor_code || vendor_code;
       }
 
-      const result = await videoService.getAllVideos({ candidate_id, vendor_id, vendor_code, status, page, limit });
+      const result = await videoService.getAllVideos({ candidate_id, vendor_id, vendor_code, assigned_reviewer_id, status, page, limit });
 
       return res.status(200).json({
         status: 'success',

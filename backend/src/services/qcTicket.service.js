@@ -6,6 +6,7 @@
 
 const db = require('../database/connection');
 const logger = require('../utils/logger');
+const notificationService = require('./notification.service');
 
 class QCTicketService {
   /**
@@ -323,6 +324,17 @@ class QCTicketService {
 
       await client.query('COMMIT');
 
+      if (assignedResults.length > 0) {
+        notificationService.createNotification({
+          user_id: null,
+          role: 'qc_team',
+          title: 'New QC Tickets Assigned 📋',
+          message: `Admin assigned ${assignedResults.length} pending video tickets to QC reviewers.`,
+          type: 'tickets_assigned',
+          color: '#7C3AED',
+        }).catch(() => {});
+      }
+
       logger.info(`✓ Least Workload Algorithm Completed: Equally distributed ${assignedResults.length} tickets across active QC team in DB transaction.`);
       return assignedResults;
     } catch (err) {
@@ -331,32 +343,6 @@ class QCTicketService {
       throw err;
     } finally {
       client.release();
-    }
-  }
-
-      // Verification log check 5 seconds post-assignment
-      if (assignedResults.length > 0) {
-        setTimeout(async () => {
-          try {
-            const checkIds = assignedResults.map(t => t.id);
-            const verifyRes = await db.query(
-              `SELECT id, ticket_code, status, assigned_reviewer_id, assigned_reviewer_name FROM qc_tickets WHERE id = ANY($1::uuid[])`,
-              [checkIds]
-            );
-            logger.info(`🔍 [DB State Verification +5s] Assigned Tickets Persistence Check:`, {
-              totalChecked: verifyRes.rowCount,
-              assignedQC: verifyRes.rows.filter(r => r.status === 'ASSIGNED_QC' && r.assigned_reviewer_id !== null).length,
-              sample: verifyRes.rows[0],
-            });
-          } catch (_) {}
-        }, 5000);
-      }
-
-      logger.info(`✓ Least Workload Algorithm Completed: Equally distributed ${assignedResults.length} tickets across active QC team.`);
-      return assignedResults;
-    } catch (err) {
-      logger.error('Error in distributeTicketsEqually', { error: err.message });
-      return [];
     }
   }
 
@@ -507,7 +493,7 @@ class QCTicketService {
 
       let queryText = `
         SELECT t.id, t.ticket_code, t.video_id, v.title AS video_title,
-               c.full_name AS candidate_name, ven.company_name AS vendor_name,
+               c.candidate_code, c.full_name AS candidate_name, ven.vendor_code, ven.company_name AS vendor_name,
                t.project_id, v.environment_tag, v.duration, t.upload_date,
                t.status, t.assigned_reviewer_id, t.assigned_reviewer_name, t.assignment_time
         FROM qc_tickets t

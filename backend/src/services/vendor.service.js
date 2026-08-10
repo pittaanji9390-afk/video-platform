@@ -11,19 +11,8 @@ const notificationService = require('./notification.service');
 
 async function generateNextVendorCode(companyName = '') {
   try {
-    let prefix = 'VEN';
-    if (companyName && companyName.trim()) {
-      const clean = companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      if (clean.length >= 3) {
-        prefix = clean.slice(0, 6);
-      } else if (clean.length > 0) {
-        prefix = clean;
-      }
-    }
-
     const res = await db.query(
-      `SELECT vendor_code FROM vendors WHERE vendor_code LIKE $1 OR vendor_code LIKE 'VEN-%'`,
-      [`${prefix}-%`]
+      `SELECT vendor_code FROM vendors WHERE vendor_code IS NOT NULL AND (vendor_code LIKE 'VEN-%' OR vendor_code LIKE '%-%')`
     ).catch(() => ({ rows: [] }));
 
     let maxNum = 0;
@@ -43,10 +32,10 @@ async function generateNextVendorCode(companyName = '') {
     }
 
     const nextNum = maxNum + 1;
-    const padStr = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
-    return `${prefix}-${padStr}`;
+    const padStr = String(nextNum).padStart(4, '0');
+    return `VEN-${padStr}`;
   } catch (_) {
-    return `VEN-01`;
+    return `VEN-0001`;
   }
 }
 

@@ -30,10 +30,10 @@ async function generateNextCandidateCode() {
     }
 
     const nextNum = maxNum + 1;
-    const padStr = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
+    const padStr = String(nextNum).padStart(4, '0');
     return `CAN-${padStr}`;
   } catch (_) {
-    return `CAN-01`;
+    return `CAN-0001`;
   }
 }
 

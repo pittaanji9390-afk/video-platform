@@ -1880,9 +1880,15 @@ class _MobileAdminDashboardScreenState extends State<MobileAdminDashboardScreen>
             ],
           ),
           const SizedBox(height: 6),
-          Text('Candidate: ${item['candidateName']} • Vendor: ${item['vendor']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          Text(
+            'Candidate: ${item['candidate_name'] ?? item['candidateName'] ?? 'Candidate'} (${item['candidate_code'] ?? item['candidateCode'] ?? 'CAN-0001'}) • Vendor: ${item['vendor_name'] ?? item['vendor'] ?? 'Vendor'} (${item['vendor_code'] ?? item['vendorCode'] ?? 'VEN-0001'})',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+          ),
           const SizedBox(height: 4),
-          Text('Duration: ${item['duration']} • ID: ${item['id']}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+          Text(
+            'Duration: ${item['duration'] ?? '0:15'} • Category: ${item['environment_tag'] ?? item['env'] ?? 'Indoor'}',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+          ),
           if ((item['assigned_reviewer_name'] ?? item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc']) != null && (item['assigned_reviewer_name'] ?? item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc']).toString().isNotEmpty) ...[
             const SizedBox(height: 4),
             Text('Assigned to: ${item['assigned_reviewer_name'] ?? item['assignedTo'] ?? item['assigned_to'] ?? item['assigned_qc']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),

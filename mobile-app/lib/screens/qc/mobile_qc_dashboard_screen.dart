@@ -110,8 +110,6 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
     try {
       final session = await AuthService.restoreSession();
       final reviewerId = session?['id'] ?? 'a0000000-0000-0000-0000-000000000001';
-      final userEmail = (session?['email'] ?? '').toString().toLowerCase();
-      final userName = (session?['name'] ?? session?['username'] ?? '').toString().toLowerCase();
 
       final Set<String> processedIds = {};
       final List<Map<String, dynamic>> fetchedPending = [];
@@ -557,8 +555,8 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
                     spacing: 8,
                     runSpacing: 6,
                     children: [
-                      _buildInfoChip(Icons.person, item['candidate_name'] ?? 'Candidate'),
-                      _buildInfoChip(Icons.store, item['vendor_name'] ?? 'Vendor'),
+                      _buildInfoChip(Icons.person, '${item['candidate_name'] ?? 'Candidate'} (${item['candidate_code'] ?? item['candidateCode'] ?? 'CAN-0001'})'),
+                      _buildInfoChip(Icons.store, '${item['vendor_name'] ?? 'Vendor'} (${item['vendor_code'] ?? item['vendorCode'] ?? 'VEN-0001'})'),
                       _buildInfoChip(Icons.work, item['project_id'] ?? 'PRJ-DEFAULT'),
                       _buildInfoChip(Icons.place, item['environment_tag'] ?? 'Environment'),
                     ],
@@ -1065,7 +1063,7 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
                   children: [
                     Icon(Icons.person_rounded, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
-                    Text(item['candidate_name'] ?? 'Candidate', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    Text('${item['candidate_name'] ?? 'Candidate'} (${item['candidate_code'] ?? item['candidateCode'] ?? 'CAN-0001'})', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                     const SizedBox(width: 12),
                     Icon(Icons.place_rounded, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
@@ -1108,7 +1106,6 @@ class _MobileQCDashboardScreenState extends State<MobileQCDashboardScreen> {
 
   Widget _buildStatusChip(String status) {
     Color bg = const Color(0xFFF59E0B);
-    Color text = Colors.white;
     String label = 'Pending QC';
 
     if (status == 'in_review') {

@@ -32,8 +32,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (session != null) {
         final name = session['name'] ?? 'Candidate User';
         final email = session['email'] ?? 'candidate@example.com';
-        final id = session['id'] ?? 'CAN-2024-001';
-        final vendor = session['vendorId'] ?? 'VEN-001';
+        final candCode = session['candidate_code'] ?? session['candidateCode'] ?? 'CAN-0001';
+        final vendorCode = session['vendor_code'] ?? session['vendorCode'] ?? 'VEN-0001';
 
         String initials = 'CU';
         final parts = name.trim().split(' ');
@@ -47,8 +47,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() {
             _candidateName = name;
             if (email.isNotEmpty) _candidateEmail = email;
-            if (id.isNotEmpty) _candidateId = id.length > 8 ? id.substring(0, 8) : id;
-            if (vendor.isNotEmpty) _vendorId = vendor;
+            _candidateId = candCode;
+            _vendorId = vendorCode;
             _initials = initials;
           });
         }
@@ -77,11 +77,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     }
                   }
                   if (c['email'] != null && c['email'].toString().isNotEmpty) _candidateEmail = c['email'];
+                  if (c['candidate_code'] != null && c['candidate_code'].toString().isNotEmpty) {
+                    _candidateId = c['candidate_code'].toString();
+                  }
                   if (c['vendor_code'] != null && c['vendor_code'].toString().isNotEmpty) {
                     _vendorId = c['vendor_code'].toString();
-                  } else if ((_vendorId == 'VEN-001' || _vendorId.isEmpty) && c['vendor_id'] != null && c['vendor_id'].toString().isNotEmpty) {
-                    final vid = c['vendor_id'].toString();
-                    _vendorId = vid.length > 8 ? vid.substring(0, 8) : vid;
                   }
                 });
               }

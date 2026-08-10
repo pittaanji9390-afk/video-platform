@@ -99,6 +99,7 @@ class CandidateDashboardTab extends StatefulWidget {
 class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
   String _candidateName = 'Candidate';
   String _candidateId = '';
+  String _candidateCode = '';
   int _totalUploaded = 0;
   String _hoursCollectedStr = '00:00';
   int _pendingQcCount = 0;
@@ -138,6 +139,7 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
       if (session != null) {
         _candidateName = session['name'] ?? session['username'] ?? 'Candidate';
         _candidateId = session['id'] ?? '';
+        _candidateCode = session['candidate_code'] ?? session['candidateCode'] ?? '';
       }
 
       // Fetch uploaded videos list dynamically
@@ -234,15 +236,27 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
                         children: [
                           Text(
                             '$_candidateName',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          Text('👋', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 6),
+                          Text('👋', style: const TextStyle(fontSize: 20)),
                         ],
                       ),
+                      if (_candidateCode.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'ID: $_candidateCode',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.85),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   Container(
@@ -339,6 +353,51 @@ class _CandidateDashboardTabState extends State<CandidateDashboardTab> {
         ],
       ),
       ),
+    );
+  }
+
+  Widget _buildQuickActionsGrid(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: _navigateToEnvironmentThenCamera,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.videocam_rounded, color: Colors.white, size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Start Recording',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

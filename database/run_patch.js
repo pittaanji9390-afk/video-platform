@@ -3,7 +3,12 @@
  * so each can fail independently without aborting the rest.
  */
 const path = require('path');
-const { Pool } = require(path.join(__dirname, '../backend/node_modules/pg'));
+let Pool;
+try {
+  Pool = require('pg').Pool;
+} catch (_) {
+  Pool = require(path.join(__dirname, '../backend/node_modules/pg')).Pool;
+}
 
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_FBwOPsI5L4fE@ep-young-leaf-axv340na-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
 
@@ -112,6 +117,9 @@ const patches = [
            is_active = TRUE,
            updated_at = NOW()`,
 
+  // 12b. Add email unique constraint to candidates
+  `ALTER TABLE candidates ADD CONSTRAINT uq_candidates_email UNIQUE (email)`,
+
   // 13. Seed default system candidate
   `INSERT INTO candidates (id, vendor_id, full_name, email, phone, password_hash, is_active, created_at, updated_at)
    VALUES (
@@ -214,6 +222,12 @@ const patches = [
            role = 'qc_team',
            is_active = TRUE,
            updated_at = NOW()`,
+
+  // 17. Ensure candidate_code and vendor_code columns and UNIQUE constraints
+  `ALTER TABLE candidates ADD COLUMN IF NOT EXISTS candidate_code VARCHAR(50)`,
+  `ALTER TABLE vendors ADD COLUMN IF NOT EXISTS vendor_code VARCHAR(50)`,
+  `ALTER TABLE candidates ADD CONSTRAINT uq_candidates_candidate_code UNIQUE (candidate_code)`,
+  `ALTER TABLE vendors ADD CONSTRAINT uq_vendors_vendor_code UNIQUE (vendor_code)`,
 ];
 
 async function runPatches() {
@@ -247,29 +261,42 @@ async function runPatches() {
 
   console.log(`\n✅ Done — ${ok} applied, ${skip} skipped, ${fail} failed`);
 
+  // Backfill candidate_code for existing candidates
+  try {
+    const uncodedCands = await client.query(`SELECT id FROM candidates WHERE candidate_code IS NULL OR candidate_code = '' ORDER BY created_at ASC`);
+    let idxC = 1;
+    for (const row of uncodedCands.rows) {
+      const code = `CAN-${String(idxC).padStart(4, '0')}`;
+      await client.query(`UPDATE candidates SET candidate_code = $1 WHERE id = $2`, [code, row.id]).catch(() => {});
+      idxC++;
+    }
+  } catch (_) {}
+
+  // Backfill vendor_code for existing vendors
+  try {
+    const uncodedVens = await client.query(`SELECT id FROM vendors WHERE vendor_code IS NULL OR vendor_code = '' ORDER BY created_at ASC`);
+    let idxV = 1;
+    for (const row of uncodedVens.rows) {
+      const code = `VEN-${String(idxV).padStart(4, '0')}`;
+      await client.query(`UPDATE vendors SET vendor_code = $1 WHERE id = $2`, [code, row.id]).catch(() => {});
+      idxV++;
+    }
+  } catch (_) {}
+
   // Final verification
   console.log('\n📊 Key table column check:');
 
-  const videosCheck = await client.query(`
-    SELECT constraint_name FROM information_schema.table_constraints
-    WHERE table_name='videos' AND constraint_name='chk_videos_status'
-  `);
-  console.log(`  videos.chk_videos_status: ${videosCheck.rowCount > 0 ? '✅ present' : '❌ missing'}`);
-
-  const payColCheck = await client.query(`
+  const candCodeCheck = await client.query(`
     SELECT column_name FROM information_schema.columns
-    WHERE table_name='payments' AND column_name='amount'
+    WHERE table_name='candidates' AND column_name='candidate_code'
   `);
-  console.log(`  payments.amount column:   ${payColCheck.rowCount > 0 ? '✅ present' : '❌ missing'}`);
+  console.log(`  candidates.candidate_code: ${candCodeCheck.rowCount > 0 ? '✅ present' : '❌ missing'}`);
 
-  const qcColCheck = await client.query(`
+  const venCodeCheck = await client.query(`
     SELECT column_name FROM information_schema.columns
-    WHERE table_name='qc_reviews' AND column_name='audio_score'
+    WHERE table_name='vendors' AND column_name='vendor_code'
   `);
-  console.log(`  qc_reviews.audio_score:   ${qcColCheck.rowCount > 0 ? '✅ present' : '❌ missing'}`);
-
-  const adminCheck = await client.query(`SELECT email FROM admins WHERE email='admin@gmail.com'`);
-  console.log(`  admin@gmail.com account:  ${adminCheck.rowCount > 0 ? '✅ present' : '❌ missing'}`);
+  console.log(`  vendors.vendor_code:       ${venCodeCheck.rowCount > 0 ? '✅ present' : '❌ missing'}`);
 
   client.release();
   await pool.end();

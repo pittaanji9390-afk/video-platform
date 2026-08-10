@@ -198,12 +198,12 @@ class VideoService {
     }
   }
 
-  async getAllVideos({ candidate_id, vendor_id, vendor_code, status, page = 1, limit = 10 }) {
+  async getAllVideos({ candidate_id, vendor_id, vendor_code, assigned_reviewer_id, status, page = 1, limit = 10 }) {
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     try {
-      let countQuery = 'SELECT COUNT(*) FROM videos v LEFT JOIN candidates c ON v.candidate_id = c.id LEFT JOIN vendors ven ON v.vendor_id = ven.id WHERE v.deleted_at IS NULL';
+      let countQuery = 'SELECT COUNT(*) FROM videos v LEFT JOIN qc_tickets t ON v.id = t.video_id LEFT JOIN candidates c ON v.candidate_id = c.id LEFT JOIN vendors ven ON v.vendor_id = ven.id WHERE v.deleted_at IS NULL';
       let selectQuery = `
-        SELECT v.id, v.candidate_id, c.full_name AS candidate_name, v.vendor_id, ven.company_name AS vendor_name, ven.vendor_code,
+        SELECT v.id, v.candidate_id, c.candidate_code, c.full_name AS candidate_name, v.vendor_id, ven.company_name AS vendor_name, ven.vendor_code,
                v.title, v.description, v.s3_url, v.file_name, v.local_path, v.file_size, v.duration,
                v.environment_tag, v.rejection_reason, v.latitude, v.longitude, v.device_id, v.recording_date, v.status,
                t.assigned_reviewer_id, t.assigned_reviewer_name,
@@ -243,6 +243,12 @@ class VideoService {
           countQuery += venCond;
           selectQuery += venCond;
         }
+      }
+      if (assigned_reviewer_id) {
+        params.push(assigned_reviewer_id);
+        const revCond = ` AND (t.assigned_reviewer_id = $${params.length} OR t.assigned_reviewer_id::text = $${params.length}::text)`;
+        countQuery += revCond;
+        selectQuery += revCond;
       }
       if (status) {
         params.push(status);

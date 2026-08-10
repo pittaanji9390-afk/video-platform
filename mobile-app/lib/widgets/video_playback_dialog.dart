@@ -22,6 +22,11 @@ class _VideoPlaybackDialogState extends State<VideoPlaybackDialog> {
 
   String _resolveStreamUrl() {
     final v = widget.videoData;
+    final id = v['video_id'] ?? v['id'] ?? v['raw_id'] ?? '';
+    if (id.toString().isNotEmpty && !id.toString().startsWith('VID-') && !id.toString().startsWith('TKT-')) {
+      return '${ApiConstants.baseUrl}${ApiConstants.apiVersion}/videos/$id/stream';
+    }
+
     final s3Url = v['s3_url'] ?? v['url'] ?? v['s3Url'] ?? '';
     if (s3Url.toString().startsWith('http')) return s3Url.toString();
 
@@ -29,11 +34,6 @@ class _VideoPlaybackDialogState extends State<VideoPlaybackDialog> {
     if (localPath.toString().isNotEmpty) {
       final cleanPath = localPath.toString().replaceAll(RegExp(r'^\.?\/+'), '');
       return '${ApiConstants.baseUrl}/$cleanPath';
-    }
-
-    final id = v['id'] ?? v['video_id'] ?? v['raw_id'] ?? '';
-    if (id.toString().isNotEmpty && !id.toString().startsWith('VID-')) {
-      return '${ApiConstants.baseUrl}${ApiConstants.apiVersion}/videos/$id/stream';
     }
 
     return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
