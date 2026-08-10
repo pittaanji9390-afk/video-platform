@@ -6,7 +6,7 @@ const { Pool } = require('pg');
 const config = require('../config');
 const logger = require('../utils/logger');
 
-const useSSL = process.env.DB_SSL === 'true';
+const useSSL = process.env.DB_SSL === 'true' || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require'));
 
 const poolConfig = process.env.DATABASE_URL
   ? {
@@ -42,7 +42,7 @@ async function connectDB() {
     logger.info(`✓ Database Connected (${config.database.host}:${config.database.port}/${config.database.name})`);
     return true;
   } catch (error) {
-    logger.warn('⚠ Local PostgreSQL not connected. Operating in API mode with fallback handling.', {
+    logger.warn('⚠ Database connection error', {
       error: error.message,
     });
     return false;
@@ -51,6 +51,10 @@ async function connectDB() {
 
 function getPool() {
   return pool;
+}
+
+async function getClient() {
+  return await pool.connect();
 }
 
 async function query(text, params) {
@@ -87,6 +91,7 @@ async function closeDB() {
 module.exports = {
   connectDB,
   getPool,
+  getClient,
   query,
   checkConnection,
   closeDB,
