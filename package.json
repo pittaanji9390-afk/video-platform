@@ -2,12 +2,14 @@
   "name": "video-platform-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Video Data Collection & Multi-Role Platform for Mobile App (Candidates, Vendors, Admin)",
+  "license": "UNLICENSED",
+  "description": "Proprietary Video Data Collection & Multi-Role Platform for Mobile App (Candidates, Vendors, Admin)",
   "scripts": {
     "install:all": "npm install && npm --prefix backend install",
     "dev:backend": "npm --prefix backend run dev",
     "dev": "npm --prefix backend run dev",
-    "start": "npm run dev"
+    "start": "npm --prefix backend start",
+    "test": "npm --prefix backend test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
